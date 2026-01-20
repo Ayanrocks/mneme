@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"mneme/internal/logger"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -36,10 +38,173 @@ func CreateFile(path string) (*os.File, error) {
 	return os.Create(expandedPath)
 }
 
+// FileExists checks if a file exists at the given path
+func FileExists(path string) (bool, error) {
+	expandedPath, err := expandPath(path)
+	if err != nil {
+		logger.Errorf("Error expanding path: %+v", err.Error())
+		return false, err
+	}
+
+	info, err := os.Stat(expandedPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			logger.Debugf("File does not exist: %s", expandedPath)
+			return false, nil
+		}
+		logger.Errorf("Error stating file %s: %+v", expandedPath, err)
+		return false, fmt.Errorf("failed to check file: %w", err)
+	}
+
+	if info.IsDir() {
+		logger.Debugf("Path is a directory, not a file: %s", expandedPath)
+		return false, nil
+	}
+
+	logger.Debugf("File exists: %s", expandedPath)
+	return true, nil
+}
+
+// ReadVersionFile reads and returns the contents of the VERSION file
+func ReadVersionFile() (string, error) {
+	versionPath := filepath.Join(DirPath, "VERSION")
+	expandedPath, err := expandPath(versionPath)
+	if err != nil {
+		logger.Errorf("Error expanding version path: %+v", err.Error())
+		return "", err
+	}
+
+	file, err := os.Open(expandedPath)
+	if err != nil {
+		logger.Errorf("Error opening VERSION file: %+v", err)
+		return "", fmt.Errorf("failed to open VERSION file: %w", err)
+	}
+	defer file.Close()
+
+	var content strings.Builder
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		content.WriteString(scanner.Text())
+		content.WriteString("\n")
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.Errorf("Error reading VERSION file: %+v", err)
+		return "", fmt.Errorf("failed to read VERSION file: %w", err)
+	}
+
+	return content.String(), nil
+}
+
+// ParseVersionFile parses the VERSION file content and extracts version information
+func ParseVersionFile(content string) (storageVersion string, cliVersion string, err error) {
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "STORAGE_VERSION:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				storageVersion = strings.TrimSpace(parts[1])
+			}
+		} else if strings.HasPrefix(line, "MNEME_CLI_VERSION:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				cliVersion = strings.TrimSpace(parts[1])
+			}
+		}
+	}
+
+	if storageVersion == "" {
+		return "", "", fmt.Errorf("STORAGE_VERSION not found in VERSION file")
+	}
+
+	return storageVersion, cliVersion, nil
+}
+
+// IsVersionCompatible checks if the existing storage version is compatible with current version
+func IsVersionCompatible() (bool, error) {
+	exists, err := FileExists(filepath.Join(DirPath, "VERSION"))
+	if err != nil {
+		return false, err
+	}
+	if !exists {
+		logger.Debug("VERSION file does not exist, initialization needed")
+		return false, nil
+	}
+
+	content, err := ReadVersionFile()
+	if err != nil {
+		return false, err
+	}
+
+	existingStorageVersion, existingCliVersion, err := ParseVersionFile(content)
+	if err != nil {
+		logger.Errorf("Error parsing VERSION file: %+v", err)
+		return false, err
+	}
+
+	currentStorageVersion := version.MnemeStorageEngineVersion
+	currentCliVersion := version.MnemeVersion
+
+	logger.Debugf("Existing storage version: %s, Current: %s", existingStorageVersion, currentStorageVersion)
+	logger.Debugf("Existing CLI version: %s, Current: %s", existingCliVersion, currentCliVersion)
+
+	// Check if versions match exactly
+	if existingStorageVersion == currentStorageVersion && existingCliVersion == currentCliVersion {
+		logger.Info("Storage is already initialized with compatible version")
+		return true, nil
+	}
+
+	// For now, we consider it incompatible if versions don't match
+	// In a real implementation, you might want to support version upgrades
+	logger.Warnf("Storage version mismatch: existing=%s, current=%s", existingStorageVersion, currentStorageVersion)
+	return false, nil
+}
+
+// ShouldInitialize determines if storage initialization is needed
+func ShouldInitialize() (bool, error) {
+	// Check if storage directory exists
+	exists, err := DirExists(DirPath)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		logger.Debug("Storage directory does not exist, initialization needed")
+		return true, nil
+	}
+
+	// Check if VERSION file exists and is compatible
+	compatible, err := IsVersionCompatible()
+	if err != nil {
+		return false, err
+	}
+
+	if !compatible {
+		logger.Debug("Storage version is not compatible, initialization needed")
+		return true, nil
+	}
+
+	logger.Debug("Storage is already initialized and compatible, skipping initialization")
+	return false, nil
+}
+
 func InitMnemeStorage() error {
-	// Fetch the default directory and check if it exists
 	logger.Info("Initializing mneme storage...")
 
+	// Check if initialization is needed
+	shouldInit, err := ShouldInitialize()
+	if err != nil {
+		logger.Errorf("Error checking if initialization is needed: %+v", err)
+		return err
+	}
+
+	if !shouldInit {
+		logger.Info("Storage already initialized, skipping...")
+		return nil
+	}
+
+	// Fetch the default directory and check if it exists
 	exists, err := DirExists(filepath.Dir(ConfigPath))
 	if err != nil {
 		logger.Errorf("Error checking if config directory exists: %+v", err)
@@ -90,7 +255,7 @@ func InitMnemeStorage() error {
 		logger.Errorf("Error creating VERSION file: %+v", err)
 		return err
 	}
-	
+
 	_, err = file.WriteString(getVersionFileContents())
 	if err != nil {
 		logger.Errorf("Error writing to VERSION file: %+v", err)
@@ -147,7 +312,7 @@ func expandPath(path string) (string, error) {
 
 func getVersionFileContents() string {
 	return fmt.Sprintf(`
-	STORAGE_VERSION: %s
-	MNEME_CLI_VERSION: %s
+STORAGE_VERSION: %s
+MNEME_CLI_VERSION: %s
 `, version.MnemeStorageEngineVersion, version.MnemeVersion)
 }
