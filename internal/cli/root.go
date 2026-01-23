@@ -86,4 +86,13 @@ func initCmdExecute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 		return
 	}
+
+	// initialize the mneme config
+	err = storage.InitMnemeConfigStorage()
+	if err != nil {
+		logger.Error("Failed to initialize mneme config")
+		os.Exit(1)
+		return
+	}
+
 }

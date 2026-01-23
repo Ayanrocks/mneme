@@ -1,0 +1,48 @@
+package core
+
+type DefaultConfig struct {
+	Version uint8         `toml:"version"`
+	Index   IndexConfig   `toml:"index"`
+	Sources SourcesConfig `toml:"sources"`
+	Watcher WatcherConfig `toml:"watcher"`
+	Search  SearchConfig  `toml:"search"`
+	Ranking RankingConfig `toml:"ranking"`
+	Logging LoggingConfig `toml:"logging"`
+}
+
+type IndexConfig struct {
+	SegmentSize          int  `toml:"segment_size"`
+	MaxTokensPerDocument int  `toml:"max_tokens_per_document"`
+	ReindexOnModify      bool `toml:"reindex_on_modify"`
+	SkipBinaryFiles      bool `toml:"skip_binary_files"`
+}
+
+type SourcesConfig struct {
+	Paths             []string `toml:"paths"`
+	IncludeExtensions []string `toml:"include_extensions"`
+	Ignore            []string `toml:"ignore"`
+}
+
+type WatcherConfig struct {
+	Enabled    bool `toml:"enabled"`
+	DebounceMS int  `toml:"debounce_ms"`
+}
+
+type SearchConfig struct {
+	DefaultLimit int    `toml:"default_limit"`
+	UseStopwords bool   `toml:"use_stopwords"`
+	Language     string `toml:"language"`
+}
+
+type RankingConfig struct {
+	TFIDFWeight         float64 `toml:"tfidf_weight"`
+	RecencyWeight       float64 `toml:"recency_weight"`
+	TitleBoost          float64 `toml:"title_boost"`
+	PathBoost           float64 `toml:"path_boost"`
+	RecencyHalfLifeDays int     `toml:"recency_half_life_days"`
+}
+
+type LoggingConfig struct {
+	Level string `toml:"level"`
+	JSON  bool   `toml:"json"`
+}

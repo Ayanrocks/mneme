@@ -4,17 +4,20 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"mneme/internal/core"
 	"mneme/internal/logger"
 	"mneme/internal/version"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 const (
 	DirPath    = "~/.local/share/mneme"
-	ConfigPath = "~/.config/mneme.yaml"
+	ConfigPath = "~/.config/mneme/mneme.toml"
 	AppName    = "mneme"
 )
 
@@ -181,11 +184,28 @@ func ShouldInitialize() (bool, error) {
 	}
 
 	if !compatible {
-		logger.Debug("Storage version is not compatible, initialization needed")
-		return true, nil
+		logger.Debug("Storage version is older")
+		return false, nil
 	}
 
 	logger.Debug("Storage is already initialized and compatible, skipping initialization")
+	return false, nil
+}
+
+// ShouldInitializeConfig determines if config initialization is needed
+func ShouldInitializeConfig() (bool, error) {
+	// Check if config file exists
+	exists, err := FileExists(ConfigPath)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		logger.Debug("Config file does not exist, initialization needed")
+		return true, nil
+	}
+
+	logger.Debug("Config file already exists, skipping initialization")
 	return false, nil
 }
 
@@ -270,6 +290,107 @@ func InitMnemeStorage() error {
 
 	logger.Info("Storage initialization completed successfully!")
 	return nil
+}
+
+func InitMnemeConfigStorage() error {
+	logger.Info("Initializing mneme configuration storage...")
+
+	shouldInit, err := ShouldInitializeConfig()
+	if err != nil {
+		logger.Errorf("Error checking if initialization is needed: %+v", err)
+		return err
+	}
+
+	if !shouldInit {
+		logger.Info("Config already initialized, skipping...")
+		return nil
+	}
+
+	exists, err := DirExists(filepath.Dir(ConfigPath))
+	if err != nil {
+		logger.Errorf("Error checking if config directory exists: %+v", err)
+		return err
+	}
+
+	if !exists {
+		logger.Infof("Creating storage directory: %s", filepath.Dir(ConfigPath))
+		if err := CreateDir(filepath.Dir(ConfigPath)); err != nil {
+			logger.Errorf("Error creating config directory: %+v", err)
+			return err
+		}
+	}
+
+	logger.Info("Creating default config")
+
+	// Get default config as TOML string
+	configContent, err := defaultConfigWriter()
+	if err != nil {
+		logger.Errorf("Error generating default config: %+v", err)
+		return err
+	}
+
+	// Create config file
+	file, err := CreateFile(ConfigPath)
+	if err != nil {
+		logger.Errorf("Error creating config file: %+v", err)
+		return err
+	}
+	defer file.Close()
+
+	// Write config to file
+	_, err = file.WriteString(configContent)
+	if err != nil {
+		logger.Errorf("Error writing to config file: %+v", err)
+		return err
+	}
+
+	logger.Info("Config initialization completed successfully!")
+	return nil
+}
+
+func defaultConfigWriter() (string, error) {
+	defaultConfig := core.DefaultConfig{
+		Version: 1,
+		Index: core.IndexConfig{
+			SegmentSize:          500,
+			MaxTokensPerDocument: 10000,
+			ReindexOnModify:      true,
+			SkipBinaryFiles:      true,
+		},
+		Sources: core.SourcesConfig{
+			Paths:             []string{},
+			IncludeExtensions: []string{},
+			Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache"},
+		},
+		Watcher: core.WatcherConfig{
+			Enabled:    true,
+			DebounceMS: 500,
+		},
+		Search: core.SearchConfig{
+			DefaultLimit: 20,
+			UseStopwords: true,
+			Language:     "en",
+		},
+		Ranking: core.RankingConfig{
+			TFIDFWeight:         1,
+			RecencyWeight:       0.3,
+			TitleBoost:          1.5,
+			PathBoost:           1.2,
+			RecencyHalfLifeDays: 30,
+		},
+		Logging: core.LoggingConfig{
+			Level: "info",
+			JSON:  true,
+		},
+	}
+
+	configBytes, err := toml.Marshal(defaultConfig)
+	if err != nil {
+		logger.Errorf("Error marshaling default config to TOML: %+v", err)
+		return "", fmt.Errorf("failed to marshal default config: %w", err)
+	}
+
+	return string(configBytes), nil
 }
 
 // DirExists checks if a directory exists at the given path
