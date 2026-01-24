@@ -21,6 +21,41 @@ const (
 	AppName    = "mneme"
 )
 
+var defaultConfig = core.DefaultConfig{
+	Version: 1,
+	Index: core.IndexConfig{
+		SegmentSize:          500,
+		MaxTokensPerDocument: 10000,
+		ReindexOnModify:      true,
+		SkipBinaryFiles:      true,
+	},
+	Sources: core.SourcesConfig{
+		Paths:             []string{},
+		IncludeExtensions: []string{},
+		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache"},
+	},
+	Watcher: core.WatcherConfig{
+		Enabled:    true,
+		DebounceMS: 500,
+	},
+	Search: core.SearchConfig{
+		DefaultLimit: 20,
+		UseStopwords: true,
+		Language:     "en",
+	},
+	Ranking: core.RankingConfig{
+		TFIDFWeight:         1,
+		RecencyWeight:       0.3,
+		TitleBoost:          1.5,
+		PathBoost:           1.2,
+		RecencyHalfLifeDays: 30,
+	},
+	Logging: core.LoggingConfig{
+		Level: "info",
+		JSON:  true,
+	},
+}
+
 // CreateDir Create directory function
 func CreateDir(path string) error {
 	expandedPath, err := expandPath(path)
@@ -349,40 +384,6 @@ func InitMnemeConfigStorage() error {
 }
 
 func defaultConfigWriter() (string, error) {
-	defaultConfig := core.DefaultConfig{
-		Version: 1,
-		Index: core.IndexConfig{
-			SegmentSize:          500,
-			MaxTokensPerDocument: 10000,
-			ReindexOnModify:      true,
-			SkipBinaryFiles:      true,
-		},
-		Sources: core.SourcesConfig{
-			Paths:             []string{},
-			IncludeExtensions: []string{},
-			Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache"},
-		},
-		Watcher: core.WatcherConfig{
-			Enabled:    true,
-			DebounceMS: 500,
-		},
-		Search: core.SearchConfig{
-			DefaultLimit: 20,
-			UseStopwords: true,
-			Language:     "en",
-		},
-		Ranking: core.RankingConfig{
-			TFIDFWeight:         1,
-			RecencyWeight:       0.3,
-			TitleBoost:          1.5,
-			PathBoost:           1.2,
-			RecencyHalfLifeDays: 30,
-		},
-		Logging: core.LoggingConfig{
-			Level: "info",
-			JSON:  true,
-		},
-	}
 
 	configBytes, err := toml.Marshal(defaultConfig)
 	if err != nil {
