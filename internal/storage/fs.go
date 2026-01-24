@@ -4,15 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"mneme/internal/core"
+	"mneme/internal/config"
 	"mneme/internal/logger"
 	"mneme/internal/version"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/pelletier/go-toml/v2"
 )
 
 const (
@@ -20,41 +18,6 @@ const (
 	ConfigPath = "~/.config/mneme/mneme.toml"
 	AppName    = "mneme"
 )
-
-var defaultConfig = core.DefaultConfig{
-	Version: 1,
-	Index: core.IndexConfig{
-		SegmentSize:          500,
-		MaxTokensPerDocument: 10000,
-		ReindexOnModify:      true,
-		SkipBinaryFiles:      true,
-	},
-	Sources: core.SourcesConfig{
-		Paths:             []string{},
-		IncludeExtensions: []string{},
-		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache"},
-	},
-	Watcher: core.WatcherConfig{
-		Enabled:    true,
-		DebounceMS: 500,
-	},
-	Search: core.SearchConfig{
-		DefaultLimit: 20,
-		UseStopwords: true,
-		Language:     "en",
-	},
-	Ranking: core.RankingConfig{
-		TFIDFWeight:         1,
-		RecencyWeight:       0.3,
-		TitleBoost:          1.5,
-		PathBoost:           1.2,
-		RecencyHalfLifeDays: 30,
-	},
-	Logging: core.LoggingConfig{
-		Level: "info",
-		JSON:  true,
-	},
-}
 
 // CreateDir Create directory function
 func CreateDir(path string) error {
@@ -358,7 +321,7 @@ func InitMnemeConfigStorage() error {
 	logger.Info("Creating default config")
 
 	// Get default config as TOML string
-	configContent, err := defaultConfigWriter()
+	configContent, err := config.DefaultConfigWriter()
 	if err != nil {
 		logger.Errorf("Error generating default config: %+v", err)
 		return err
@@ -383,16 +346,6 @@ func InitMnemeConfigStorage() error {
 	return nil
 }
 
-func defaultConfigWriter() (string, error) {
-
-	configBytes, err := toml.Marshal(defaultConfig)
-	if err != nil {
-		logger.Errorf("Error marshaling default config to TOML: %+v", err)
-		return "", fmt.Errorf("failed to marshal default config: %w", err)
-	}
-
-	return string(configBytes), nil
-}
 
 // DirExists checks if a directory exists at the given path
 func DirExists(path string) (bool, error) {
