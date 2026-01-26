@@ -18,7 +18,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "mneme",
-	Short: "Mneme - A powerful perosnal search engine",
+	Short: "Mneme - A powerful personal search engine",
 	Long:  `Mneme - a powerful search engine to search for all the personal documents, repos, files`,
 
 	PreRun: func(cmd *cobra.Command, args []string) {

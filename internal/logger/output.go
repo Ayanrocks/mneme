@@ -57,6 +57,12 @@ func Print(format string, a ...interface{}) {
 	}
 }
 
+// PrintRaw prints a message without any prefix or icon
+func PrintRaw(format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	fmt.Println(msg)
+}
+
 // Warning prints a warning message (yellow)
 func Warning(format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)

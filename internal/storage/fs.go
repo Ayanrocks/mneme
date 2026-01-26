@@ -5,18 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"mneme/internal/config"
+	"mneme/internal/constants"
 	"mneme/internal/logger"
 	"mneme/internal/version"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-)
-
-const (
-	DirPath    = "~/.local/share/mneme"
-	ConfigPath = "~/.config/mneme/mneme.toml"
-	AppName    = "mneme"
 )
 
 // CreateDir Create directory function
@@ -68,7 +63,7 @@ func FileExists(path string) (bool, error) {
 
 // ReadVersionFile reads and returns the contents of the VERSION file
 func ReadVersionFile() (string, error) {
-	versionPath := filepath.Join(DirPath, "VERSION")
+	versionPath := filepath.Join(constants.DirPath, "VERSION")
 	expandedPath, err := expandPath(versionPath)
 	if err != nil {
 		logger.Errorf("Error expanding version path: %+v", err.Error())
@@ -124,7 +119,7 @@ func ParseVersionFile(content string) (storageVersion string, cliVersion string,
 
 // IsVersionCompatible checks if the existing storage version is compatible with current version
 func IsVersionCompatible() (bool, error) {
-	exists, err := FileExists(filepath.Join(DirPath, "VERSION"))
+	exists, err := FileExists(filepath.Join(constants.DirPath, "VERSION"))
 	if err != nil {
 		return false, err
 	}
@@ -165,7 +160,7 @@ func IsVersionCompatible() (bool, error) {
 // ShouldInitialize determines if storage initialization is needed
 func ShouldInitialize() (bool, error) {
 	// Check if storage directory exists
-	exists, err := DirExists(DirPath)
+	exists, err := DirExists(constants.DirPath)
 	if err != nil {
 		return false, err
 	}
@@ -193,7 +188,7 @@ func ShouldInitialize() (bool, error) {
 // ShouldInitializeConfig determines if config initialization is needed
 func ShouldInitializeConfig() (bool, error) {
 	// Check if config file exists
-	exists, err := FileExists(ConfigPath)
+	exists, err := FileExists(constants.ConfigPath)
 	if err != nil {
 		return false, err
 	}
@@ -223,44 +218,44 @@ func InitMnemeStorage() error {
 	}
 
 	// Fetch the default directory and check if it exists
-	exists, err := DirExists(filepath.Dir(ConfigPath))
+	exists, err := DirExists(filepath.Dir(constants.ConfigPath))
 	if err != nil {
 		logger.Errorf("Error checking if config directory exists: %+v", err)
 		return err
 	}
 
 	if !exists {
-		logger.Infof("Creating storage directory: %s", DirPath)
-		if err := CreateDir(DirPath); err != nil {
-			logger.Errorf("Error creating directory %s: %+v", DirPath, err)
+		logger.Infof("Creating storage directory: %s", constants.DirPath)
+		if err := CreateDir(constants.DirPath); err != nil {
+			logger.Errorf("Error creating directory %s: %+v", constants.DirPath, err)
 			return err
 		}
 	}
 
 	// Now if dir exists, let's initialize the folder structure for mneme
 	// Create the mneme directory first
-	logger.Infof("Creating app directory: %s", DirPath)
-	err = CreateDir(DirPath)
+	logger.Infof("Creating app directory: %s", constants.DirPath)
+	err = CreateDir(constants.DirPath)
 	if err != nil {
-		logger.Errorf("Error creating app directory %s: %+v", AppName, err)
+		logger.Errorf("Error creating app directory %s: %+v", constants.AppName, err)
 		return err
 	}
 
 	// create internal directories
 	logger.Info("Creating internal directories...")
-	err = CreateDir(path.Join(DirPath, "meta"))
+	err = CreateDir(path.Join(constants.DirPath, "meta"))
 	if err != nil {
 		logger.Errorf("Error creating meta directory: %+v", err)
 		return err
 	}
 
-	err = CreateDir(path.Join(DirPath, "segments"))
+	err = CreateDir(path.Join(constants.DirPath, "segments"))
 	if err != nil {
 		logger.Errorf("Error creating segments directory: %+v", err)
 		return err
 	}
 
-	err = CreateDir(path.Join(DirPath, "tombstones"))
+	err = CreateDir(path.Join(constants.DirPath, "tombstones"))
 	if err != nil {
 		logger.Errorf("Error creating tombstones directory: %+v", err)
 		return err
@@ -268,7 +263,7 @@ func InitMnemeStorage() error {
 
 	// Create an empty version file with the current version of the mneme that created the folder
 	logger.Info("Creating version file...")
-	file, err := CreateFile(path.Join(DirPath, "VERSION"))
+	file, err := CreateFile(path.Join(constants.DirPath, "VERSION"))
 	if err != nil {
 		logger.Errorf("Error creating VERSION file: %+v", err)
 		return err
@@ -304,15 +299,15 @@ func InitMnemeConfigStorage() error {
 		return nil
 	}
 
-	exists, err := DirExists(filepath.Dir(ConfigPath))
+	exists, err := DirExists(filepath.Dir(constants.ConfigPath))
 	if err != nil {
 		logger.Errorf("Error checking if config directory exists: %+v", err)
 		return err
 	}
 
 	if !exists {
-		logger.Infof("Creating storage directory: %s", filepath.Dir(ConfigPath))
-		if err := CreateDir(filepath.Dir(ConfigPath)); err != nil {
+		logger.Infof("Creating storage directory: %s", filepath.Dir(constants.ConfigPath))
+		if err := CreateDir(filepath.Dir(constants.ConfigPath)); err != nil {
 			logger.Errorf("Error creating config directory: %+v", err)
 			return err
 		}
@@ -328,7 +323,7 @@ func InitMnemeConfigStorage() error {
 	}
 
 	// Create config file
-	file, err := CreateFile(ConfigPath)
+	file, err := CreateFile(constants.ConfigPath)
 	if err != nil {
 		logger.Errorf("Error creating config file: %+v", err)
 		return err
@@ -345,7 +340,6 @@ func InitMnemeConfigStorage() error {
 	logger.Info("Config initialization completed successfully!")
 	return nil
 }
-
 
 // DirExists checks if a directory exists at the given path
 func DirExists(path string) (bool, error) {

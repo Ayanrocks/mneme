@@ -16,6 +16,8 @@ type Logger struct {
 var (
 	// Global logger instance
 	log *Logger
+	// User-friendly logger without timestamps
+	userLog *Logger
 )
 
 // Init initializes the global logger with CLI-optimized settings
@@ -47,6 +49,22 @@ func Init(verbose bool, quiet bool, jsonOutput bool) {
 		Logger()
 
 	log = &Logger{logger}
+
+	// Create user-friendly logger without timestamps
+	var userOutput io.Writer = os.Stdout
+	if !jsonOutput {
+		userOutput = zerolog.ConsoleWriter{
+			Out:        os.Stdout,
+			TimeFormat: "",
+			NoColor:    false,
+		}
+	}
+
+	userLogger := zerolog.New(userOutput).
+		With().
+		Logger()
+
+	userLog = &Logger{userLogger}
 }
 
 // Get returns the global logger instance
