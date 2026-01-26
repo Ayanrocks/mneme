@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -154,36 +156,49 @@ func ClearProgress() {
 
 // Spinner shows a spinning indicator
 type Spinner struct {
+	mu     sync.Mutex
 	active bool
 	msg    string
 }
 
 // Start starts a spinner with a message
 func (s *Spinner) Start(msg string) {
+	s.mu.Lock()
 	s.active = true
 	s.msg = msg
+	s.mu.Unlock()
 	go s.animate()
 }
 
 // Stop stops the spinner
 func (s *Spinner) Stop() {
+	s.mu.Lock()
 	s.active = false
+	s.mu.Unlock()
 	ClearProgress()
+}
+
+// isActive returns the current active state in a thread-safe manner
+func (s *Spinner) isActive() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.active
 }
 
 func (s *Spinner) animate() {
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	i := 0
-	for s.active {
+	for s.isActive() {
+		s.mu.Lock()
+		msg := s.msg
+		s.mu.Unlock()
 		if colorsEnabled {
-			Progress("%s %s", infoColor(frames[i]), s.msg)
+			Progress("%s %s", infoColor(frames[i]), msg)
 		} else {
-			Progress("%s %s", frames[i], s.msg)
+			Progress("%s %s", frames[i], msg)
 		}
 		i = (i + 1) % len(frames)
-		// Sleep for ~100ms
-		// Note: In a real implementation, you'd use time.Sleep
-		// but we're avoiding imports for simplicity
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
