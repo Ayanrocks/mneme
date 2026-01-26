@@ -14,7 +14,7 @@ import (
 	"mneme/internal/logger"
 )
 
-func addCmdExecute(cmd *cobra.Command, args []string) {
+func AddCmdExecute(cmd *cobra.Command, args []string) {
 	logger.Info("addCmdExecute")
 
 	// Validate that a path was provided
@@ -168,7 +168,7 @@ func addCmdExecute(cmd *cobra.Command, args []string) {
 	logger.Infof("Successfully added path to config: %s", expandedPath)
 }
 
-func removeCmdExecute(cmd *cobra.Command, args []string) {
+func RemoveCmdExecute(cmd *cobra.Command, args []string) {
 	logger.Info("removeCmdExecute")
 
 	// Check if --all flag is set

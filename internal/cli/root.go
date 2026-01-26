@@ -1,7 +1,6 @@
 package cli
 
 import (
-	mnemeConfig "mneme/internal/config"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
 	"mneme/internal/version"
@@ -69,7 +68,7 @@ func init() {
 	// Add commands to root
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(mnemeConfig.ConfigCmd)
+	rootCmd.AddCommand(ConfigCmd)
 }
 
 func versionCmdExecute(cmd *cobra.Command, args []string) {
