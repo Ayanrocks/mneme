@@ -25,14 +25,24 @@ var showCmd = &cobra.Command{
 
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "add configuration values",
-	Long:  `add configuration values`,
+	Short: "add path to index",
+	Long:  `add path to index`,
 	Run:   addCmdExecute,
 }
 
+var removeCmd = &cobra.Command{
+	Use:   "remove",
+	Short: "remove path from indexing",
+	Long:  `remove path from indexing`,
+	Run:   removeCmdExecute,
+}
+
 func init() {
+	removeCmd.Flags().BoolP("all", "a", false, "Remove all paths")
+
 	ConfigCmd.AddCommand(showCmd)
 	ConfigCmd.AddCommand(addCmd)
+	ConfigCmd.AddCommand(removeCmd)
 }
 
 // DefaultConfig is the default configuration for mneme
