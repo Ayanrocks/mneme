@@ -28,6 +28,40 @@ func addCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Validate the input path before expansion
+	// Check for obviously invalid patterns
+	if len(path) > 0 {
+		hasLetterOrNumber := false
+		hasPathSeparator := false
+		hasTilde := false
+
+		for _, c := range path {
+			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
+				hasLetterOrNumber = true
+			}
+			if c == '/' || c == '\\' {
+				hasPathSeparator = true
+			}
+			if c == '~' {
+				hasTilde = true
+			}
+		}
+
+		// If path has no letters/numbers AND no path separators AND no tilde, it's likely invalid
+		// (e.g., "!!!", "###", "   ", etc.)
+		if !hasLetterOrNumber && !hasPathSeparator && !hasTilde {
+			logger.PrintError("Invalid path provided. Path should contain letters, numbers, or path separators.")
+			logger.PrintRaw("Usage: mneme config add <path>")
+			logger.PrintRaw("")
+			logger.PrintRaw("Examples:")
+			logger.PrintRaw("  mneme config add /path/to/directory")
+			logger.PrintRaw("  mneme config add ~/Documents")
+			logger.PrintRaw("  mneme config add ./relative/path")
+			logger.PrintRaw("  mneme config add $HOME/Projects")
+			return
+		}
+	}
+
 	// Expand the path (handle ~ and environment variables)
 	expandedPath := os.ExpandEnv(path)
 
@@ -41,6 +75,35 @@ func addCmdExecute(cmd *cobra.Command, args []string) {
 		expandedPath = absPath
 	}
 
+	// Validate that the path is not empty after expansion
+	if expandedPath == "" || len(expandedPath) == 0 {
+		logger.PrintError("Invalid path provided. Path cannot be empty.")
+		logger.PrintRaw("Usage: mneme config add <path>")
+		logger.PrintRaw("")
+		logger.PrintRaw("Examples:")
+		logger.PrintRaw("  mneme config add /path/to/directory")
+		logger.PrintRaw("  mneme config add ~/Documents")
+		logger.PrintRaw("  mneme config add ./relative/path")
+		logger.PrintRaw("  mneme config add $HOME/Projects")
+		return
+	}
+
+	// Validate that the path exists on the filesystem
+	if _, err := os.Stat(expandedPath); os.IsNotExist(err) {
+		logger.Errorf("Path does not exist: %s", expandedPath)
+		logger.PrintRaw("Please provide a valid path that exists on the filesystem")
+		logger.PrintRaw("")
+		logger.PrintRaw("Examples:")
+		logger.PrintRaw("  mneme config add /path/to/directory")
+		logger.PrintRaw("  mneme config add ~/Documents")
+		logger.PrintRaw("  mneme config add ./relative/path")
+		logger.PrintRaw("  mneme config add $HOME/Projects")
+		return
+	} else if err != nil {
+		logger.Errorf("Error checking path: %+v", err)
+		return
+	}
+
 	// Expand the config path
 	configPath, err := utils.ExpandFilePath(constants.ConfigPath)
 	if err != nil {
@@ -52,7 +115,7 @@ func addCmdExecute(cmd *cobra.Command, args []string) {
 	// Check if config directory exists
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		logger.Errorf("Config directory does not exist: %s", configDir)
-		logger.Info("Please run 'mneme init' to initialize the configuration first")
+		logger.PrintRaw("Please run 'mneme init' to initialize the configuration first")
 		return
 	}
 
