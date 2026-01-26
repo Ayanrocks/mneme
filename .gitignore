@@ -27,6 +27,7 @@ mneme
 *.swp
 *.swo
 *~
+.github
 
 # OS files
 .DS_Store

@@ -226,7 +226,7 @@ func RemoveCmdExecute(cmd *cobra.Command, args []string) {
 		// Display the paths that will be removed
 		logger.Info("The following paths will be removed:")
 		for _, path := range config.Sources.Paths {
-			logger.PrintRaw("  - " + path)
+			logger.PrintRaw("%s", "  - "+path)
 		}
 		logger.PrintRaw("")
 

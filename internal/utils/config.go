@@ -83,7 +83,7 @@ func PrettyPrintConfig(configBytes []byte) error {
 
 	// Helper function to print a struct section
 	printSection := func(sectionName string, sectionValue reflect.Value) {
-		logger.PrintRaw(sectionColor.Sprint(sectionName))
+		logger.PrintRaw("%s", sectionColor.Sprint(sectionName))
 
 		// Iterate through fields of the struct
 		for i := 0; i < sectionValue.NumField(); i++ {
@@ -102,7 +102,7 @@ func PrettyPrintConfig(configBytes []byte) error {
 			}
 
 			// Print the field
-			logger.PrintRaw("  " + keyColor.Sprint(tomlTag) + ": " + printValue(fieldValue, "  "))
+			logger.PrintRaw("%s", "  "+keyColor.Sprint(tomlTag)+": "+printValue(fieldValue, "  "))
 		}
 		logger.PrintRaw("")
 	}
