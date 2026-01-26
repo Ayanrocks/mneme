@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -114,4 +117,22 @@ func PrettyPrintConfig(configBytes []byte) error {
 	printSection("[LOGGING]", reflect.ValueOf(config.Logging))
 
 	return nil
+}
+
+func ExpandFilePath(path string) (string, error) {
+	// Handle tilde expansion first
+	if len(path) > 0 && path[0] == '~' {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			logger.Errorf("Error getting user home directory: %+v", err)
+			return "", fmt.Errorf("failed to get home directory: %w", err)
+		}
+		// Join home directory with the rest of the path (after ~)
+		// This handles cases like "~", "~/", "~/.config", etc.
+		return filepath.Abs(filepath.Join(home, path[1:]))
+	}
+
+	// Handle relative paths (., ../, ../../../, etc.)
+	// Convert to absolute path
+	return filepath.Abs(path)
 }

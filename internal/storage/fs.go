@@ -7,6 +7,7 @@ import (
 	"mneme/internal/config"
 	"mneme/internal/constants"
 	"mneme/internal/logger"
+	"mneme/internal/utils"
 	"mneme/internal/version"
 	"os"
 	"path"
@@ -16,7 +17,7 @@ import (
 
 // CreateDir Create directory function
 func CreateDir(path string) error {
-	expandedPath, err := expandPath(path)
+	expandedPath, err := utils.ExpandFilePath(path)
 	if err != nil {
 		logger.Errorf("Error Expanding Path: %+v", err.Error())
 		return err
@@ -26,7 +27,7 @@ func CreateDir(path string) error {
 
 // CreateFile creates a file at the given path, expanding ~ to home directory
 func CreateFile(path string) (*os.File, error) {
-	expandedPath, err := expandPath(path)
+	expandedPath, err := utils.ExpandFilePath(path)
 	if err != nil {
 		logger.Errorf("Error expanding path: %+v", err.Error())
 		return nil, err
@@ -36,7 +37,7 @@ func CreateFile(path string) (*os.File, error) {
 
 // FileExists checks if a file exists at the given path
 func FileExists(path string) (bool, error) {
-	expandedPath, err := expandPath(path)
+	expandedPath, err := utils.ExpandFilePath(path)
 	if err != nil {
 		logger.Errorf("Error expanding path: %+v", err.Error())
 		return false, err
@@ -64,7 +65,7 @@ func FileExists(path string) (bool, error) {
 // ReadVersionFile reads and returns the contents of the VERSION file
 func ReadVersionFile() (string, error) {
 	versionPath := filepath.Join(constants.DirPath, "VERSION")
-	expandedPath, err := expandPath(versionPath)
+	expandedPath, err := utils.ExpandFilePath(versionPath)
 	if err != nil {
 		logger.Errorf("Error expanding version path: %+v", err.Error())
 		return "", err
@@ -75,7 +76,12 @@ func ReadVersionFile() (string, error) {
 		logger.Errorf("Error opening VERSION file: %+v", err)
 		return "", fmt.Errorf("failed to open VERSION file: %w", err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err = file.Close()
+		if err != nil {
+			logger.Errorf("Error closing VERSION file: %+v", err)
+		}
+	}(file)
 
 	var content strings.Builder
 	scanner := bufio.NewScanner(file)
@@ -268,16 +274,16 @@ func InitMnemeStorage() error {
 		logger.Errorf("Error creating VERSION file: %+v", err)
 		return err
 	}
+	defer func() {
+		err = file.Close()
+		if err != nil {
+			logger.Errorf("Error closing VERSION file: %+v", err)
+		}
+	}()
 
 	_, err = file.WriteString(getVersionFileContents())
 	if err != nil {
 		logger.Errorf("Error writing to VERSION file: %+v", err)
-		return err
-	}
-
-	err = file.Close()
-	if err != nil {
-		logger.Errorf("Error closing VERSION file: %+v", err)
 		return err
 	}
 
@@ -328,7 +334,12 @@ func InitMnemeConfigStorage() error {
 		logger.Errorf("Error creating config file: %+v", err)
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		err = file.Close()
+		if err != nil {
+			logger.Errorf("Error closing VERSION file: %+v", err)
+		}
+	}()
 
 	// Write config to file
 	_, err = file.WriteString(configContent)
@@ -344,7 +355,7 @@ func InitMnemeConfigStorage() error {
 // DirExists checks if a directory exists at the given path
 func DirExists(path string) (bool, error) {
 	// Expand ~ to home directory
-	expandedPath, err := expandPath(path)
+	expandedPath, err := utils.ExpandFilePath(path)
 	if err != nil {
 		logger.Errorf("Error Expanding Path: %+v", err.Error())
 		return false, err
@@ -364,19 +375,6 @@ func DirExists(path string) (bool, error) {
 		logger.Debugf("Directory exists: %s", expandedPath)
 	}
 	return info.IsDir(), nil
-}
-
-// expandPath expands ~ to the user's home directory
-func expandPath(path string) (string, error) {
-	if len(path) > 0 && path[0] == '~' {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			logger.Errorf("Error getting user home directory: %+v", err)
-			return "", fmt.Errorf("failed to get home directory: %w", err)
-		}
-		return filepath.Join(home, path[1:]), nil
-	}
-	return path, nil
 }
 
 func getVersionFileContents() string {

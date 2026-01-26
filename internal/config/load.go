@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -15,14 +14,10 @@ func showCmdExecute(cmd *cobra.Command, args []string) {
 	logger.Info("showCmdExecute")
 
 	// Expand the config path (handle ~)
-	configPath := os.ExpandEnv(constants.ConfigPath)
-	if strings.HasPrefix(configPath, "~") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			logger.Errorf("Failed to get user home directory: %+v", err)
-			return
-		}
-		configPath = strings.Replace(configPath, "~", home, 1)
+	configPath, err := utils.ExpandFilePath(constants.ConfigPath)
+	if err != nil {
+		logger.Errorf("Failed to expand config path: %+v", err)
+		return
 	}
 
 	// Read the config file

@@ -23,8 +23,16 @@ var showCmd = &cobra.Command{
 	Run:   showCmdExecute,
 }
 
+var addCmd = &cobra.Command{
+	Use:   "add",
+	Short: "add configuration values",
+	Long:  `add configuration values`,
+	Run:   addCmdExecute,
+}
+
 func init() {
 	ConfigCmd.AddCommand(showCmd)
+	ConfigCmd.AddCommand(addCmd)
 }
 
 // DefaultConfig is the default configuration for mneme
