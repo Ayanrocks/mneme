@@ -65,7 +65,11 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// TODO: check if the segments exists, then clear the directory and start fresh segmenting.
+	// TO be done later
 
-
+	// Start reading the files from the paths
+	
+	
 
 }

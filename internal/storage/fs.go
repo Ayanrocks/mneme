@@ -383,3 +383,32 @@ STORAGE_VERSION: %s
 MNEME_CLI_VERSION: %s
 `, version.MnemeStorageEngineVersion, version.MnemeVersion)
 }
+
+// ReadFileContents reads and returns the contents of the file at the given path
+func ReadFileContents(path string) ([]string, error) {
+	expandedPath, err := utils.ExpandFilePath(path)
+	if err != nil {
+		logger.Errorf("Error expanding path: %+v", err)
+		return nil, err
+	}
+
+	file, err := os.Open(expandedPath)
+	if err != nil {
+		logger.Errorf("Error opening file %s: %+v", expandedPath, err)
+		return nil, err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.Errorf("Error reading file %s: %+v", expandedPath, err)
+		return nil, err
+	}
+
+	return lines, nil
+}

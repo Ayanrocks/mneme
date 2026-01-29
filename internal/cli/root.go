@@ -6,6 +6,7 @@ import (
 	"mneme/internal/storage"
 	"mneme/internal/version"
 	"os"
+	"path"
 	"runtime"
 
 	"github.com/spf13/cobra"
@@ -73,9 +74,9 @@ func init() {
 	rootCmd.AddCommand(indexCmd)
 }
 
-// IsInitialized checks if the init command was run by verifying that both
-// the config file and the data directory exist.
-// Returns true if both paths exist, false if either is missing.
+// IsInitialized checks if the init command was run by verifying that the
+// config file, the data directory, and all nested directories exist.
+// Returns true if all paths exist, false if any is missing.
 func IsInitialized() (bool, error) {
 	// Check if the config file exists
 	configExists, err := storage.FileExists(constants.ConfigPath)
@@ -102,7 +103,22 @@ func IsInitialized() (bool, error) {
 		return false, nil
 	}
 
-	logger.Debug("Both config file and data directory exist - init was run")
+	// Check if all nested directories exist
+	nestedDirs := []string{"meta", "segments", "tombstones"}
+	for _, dir := range nestedDirs {
+		dirPath := path.Join(constants.DirPath, dir)
+		exists, err := storage.DirExists(dirPath)
+		if err != nil {
+			logger.Errorf("Error checking nested directory %s: %+v", dir, err)
+			return false, err
+		}
+		if !exists {
+			logger.Debugf("Nested directory %s does not exist - init is incomplete", dir)
+			return false, nil
+		}
+	}
+
+	logger.Debug("Config file, data directory, and all nested directories exist - init was run")
 	return true, nil
 }
 
@@ -130,5 +146,7 @@ func initCmdExecute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 		return
 	}
+
+	
 
 }
