@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var ConfigCmd = &cobra.Command{
+var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Configuration commands",
 	Long:  `Configuration commands`,
@@ -36,7 +36,7 @@ var removeCmd = &cobra.Command{
 func init() {
 	removeCmd.Flags().BoolP("all", "a", false, "Remove all paths")
 
-	ConfigCmd.AddCommand(showCmd)
-	ConfigCmd.AddCommand(addCmd)
-	ConfigCmd.AddCommand(removeCmd)
+	configCmd.AddCommand(showCmd)
+	configCmd.AddCommand(addCmd)
+	configCmd.AddCommand(removeCmd)
 }

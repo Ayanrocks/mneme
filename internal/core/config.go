@@ -1,6 +1,6 @@
 package core
 
-type DefaultConfig struct {
+type Config struct {
 	Version uint8         `toml:"version"`
 	Index   IndexConfig   `toml:"index"`
 	Sources SourcesConfig `toml:"sources"`

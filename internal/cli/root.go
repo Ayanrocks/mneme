@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"mneme/internal/constants"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
 	"mneme/internal/version"
@@ -68,7 +69,41 @@ func init() {
 	// Add commands to root
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(ConfigCmd)
+	rootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(indexCmd)
+}
+
+// IsInitialized checks if the init command was run by verifying that both
+// the config file and the data directory exist.
+// Returns true if both paths exist, false if either is missing.
+func IsInitialized() (bool, error) {
+	// Check if the config file exists
+	configExists, err := storage.FileExists(constants.ConfigPath)
+	if err != nil {
+		logger.Errorf("Error checking config file: %+v", err)
+		return false, err
+	}
+
+	// Check if the data directory exists
+	dirExists, err := storage.DirExists(constants.DirPath)
+	if err != nil {
+		logger.Errorf("Error checking data directory: %+v", err)
+		return false, err
+	}
+
+	// Both must exist for init to be considered complete
+	if !configExists || !dirExists {
+		if !configExists {
+			logger.Debug("Config file does not exist - init has not been run")
+		}
+		if !dirExists {
+			logger.Debug("Data directory does not exist - init has not been run")
+		}
+		return false, nil
+	}
+
+	logger.Debug("Both config file and data directory exist - init was run")
+	return true, nil
 }
 
 func versionCmdExecute(cmd *cobra.Command, args []string) {

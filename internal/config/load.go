@@ -14,7 +14,7 @@ import (
 )
 
 // DefaultConfig is the default configuration for mneme
-var DefaultConfig = core.DefaultConfig{
+var DefaultConfig = core.Config{
 	Version: 1,
 	Index: core.IndexConfig{
 		SegmentSize:          500,
@@ -58,6 +58,41 @@ func DefaultConfigWriter() (string, error) {
 	}
 
 	return string(configBytes), nil
+}
+
+func LoadConfig() (*core.Config, error) {
+	var config core.Config
+
+	// read config from config path
+	configPath, err := utils.ExpandFilePath(constants.ConfigPath)
+	if err != nil {
+		logger.Errorf("Failed to expand config path: %+v", err)
+		return nil, fmt.Errorf("failed to expand config path: %w", err)
+	}
+
+	// Read the config file
+	configBytes, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.Warnf("Config file not found at: %s", configPath)
+			logger.Info("Using default configuration")
+			configStr, err := DefaultConfigWriter()
+			if err != nil {
+				logger.Errorf("Failed to write default config: %+v", err)
+				return nil, fmt.Errorf("failed to write default config: %w", err)
+			}
+			configBytes = []byte(configStr)
+		} else {
+			logger.Errorf("Failed to read config file: %+v", err)
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+	}
+
+	if err := toml.Unmarshal(configBytes, &config); err != nil {
+		logger.Errorf("Error unmarshaling config: %+v", err)
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+	return &config, nil
 }
 
 func ShowCmdExecute(cmd *cobra.Command, args []string) {

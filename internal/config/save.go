@@ -121,7 +121,7 @@ func AddCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	// Read the existing config file
-	var config core.DefaultConfig
+	var config core.Config
 	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -194,7 +194,7 @@ func RemoveCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	// Read the existing config file
-	var config core.DefaultConfig
+	var config core.Config
 	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {

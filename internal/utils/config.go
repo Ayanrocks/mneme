@@ -17,7 +17,7 @@ import (
 // PrettyPrintConfig displays the configuration in an intuitive bracket/tree format
 // that's easy to read without TOML knowledge
 func PrettyPrintConfig(configBytes []byte) error {
-	var config core.DefaultConfig
+	var config core.Config
 	if err := toml.Unmarshal(configBytes, &config); err != nil {
 		logger.Errorf("Failed to parse config: %+v", err)
 		return err

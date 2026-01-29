@@ -127,7 +127,7 @@ func TestDefaultConfig(t *testing.T) {
 func TestConfigMarshaling(t *testing.T) {
 	t.Run("can marshal and unmarshal config", func(t *testing.T) {
 		// Create a test config
-		testConfig := core.DefaultConfig{
+		testConfig := core.Config{
 			Version: 1,
 			Index: core.IndexConfig{
 				SegmentSize:          100,
@@ -168,7 +168,7 @@ func TestConfigMarshaling(t *testing.T) {
 		require.NotEmpty(t, configBytes)
 
 		// Unmarshal back
-		var unmarshaledConfig core.DefaultConfig
+		var unmarshaledConfig core.Config
 		err = toml.Unmarshal(configBytes, &unmarshaledConfig)
 		require.NoError(t, err)
 
@@ -190,7 +190,7 @@ func TestConfigFileOperations(t *testing.T) {
 
 	t.Run("write and read config file", func(t *testing.T) {
 		// Create a test config
-		testConfig := core.DefaultConfig{
+		testConfig := core.Config{
 			Version: 1,
 			Index: core.IndexConfig{
 				SegmentSize:          500,
@@ -237,7 +237,7 @@ func TestConfigFileOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Unmarshal and verify
-		var readConfig core.DefaultConfig
+		var readConfig core.Config
 		err = toml.Unmarshal(readBytes, &readConfig)
 		require.NoError(t, err)
 
@@ -258,7 +258,7 @@ func TestConfigFileOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to unmarshal empty file
-		var config core.DefaultConfig
+		var config core.Config
 		err = toml.Unmarshal([]byte(""), &config)
 		// Empty file should not error, just result in zero values
 		assert.NoError(t, err)

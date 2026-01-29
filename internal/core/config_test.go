@@ -8,7 +8,7 @@ import (
 
 func TestDefaultConfigStructure(t *testing.T) {
 	t.Run("has all required fields", func(t *testing.T) {
-		config := DefaultConfig{
+		config := Config{
 			Version: 1,
 			Index: IndexConfig{
 				SegmentSize:          500,

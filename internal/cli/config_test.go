@@ -9,9 +9,9 @@ import (
 
 func TestConfigCmd(t *testing.T) {
 	t.Run("has correct configuration", func(t *testing.T) {
-		assert.Equal(t, "config", ConfigCmd.Use)
-		assert.Equal(t, "Configuration commands", ConfigCmd.Short)
-		assert.Equal(t, "Configuration commands", ConfigCmd.Long)
+		assert.Equal(t, "config", configCmd.Use)
+		assert.Equal(t, "Configuration commands", configCmd.Short)
+		assert.Equal(t, "Configuration commands", configCmd.Long)
 	})
 }
 
@@ -61,7 +61,7 @@ func TestRemoveCmd(t *testing.T) {
 func TestConfigSubcommandRegistration(t *testing.T) {
 	t.Run("show command is registered under config", func(t *testing.T) {
 		found := false
-		for _, cmd := range ConfigCmd.Commands() {
+		for _, cmd := range configCmd.Commands() {
 			if cmd.Use == "show" {
 				found = true
 				break
@@ -72,7 +72,7 @@ func TestConfigSubcommandRegistration(t *testing.T) {
 
 	t.Run("add command is registered under config", func(t *testing.T) {
 		found := false
-		for _, cmd := range ConfigCmd.Commands() {
+		for _, cmd := range configCmd.Commands() {
 			if cmd.Use == "add" {
 				found = true
 				break
@@ -83,7 +83,7 @@ func TestConfigSubcommandRegistration(t *testing.T) {
 
 	t.Run("remove command is registered under config", func(t *testing.T) {
 		found := false
-		for _, cmd := range ConfigCmd.Commands() {
+		for _, cmd := range configCmd.Commands() {
 			if cmd.Use == "remove" {
 				found = true
 				break
@@ -95,6 +95,6 @@ func TestConfigSubcommandRegistration(t *testing.T) {
 
 func TestConfigCmdCount(t *testing.T) {
 	t.Run("has exactly 3 subcommands", func(t *testing.T) {
-		assert.Equal(t, 3, len(ConfigCmd.Commands()), "ConfigCmd should have exactly 3 subcommands (show, add, remove)")
+		assert.Equal(t, 3, len(configCmd.Commands()), "ConfigCmd should have exactly 3 subcommands (show, add, remove)")
 	})
 }
