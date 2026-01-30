@@ -1,14 +1,24 @@
 package index
 
 import (
+	"mneme/internal/core"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"unicode"
 )
 
-func IndexBuilder(paths []string) {
+func IndexBuilder(paths []string) *core.Segment {
 	logger.Info("Starting IndexBuilder")
 
-	docId := uint(0)
+	// Token frequency map: token -> frequency count
+	tokenFrequency := make(map[string]uint)
+	invertedIndex := make(map[string][]core.Posting)
+	docs := make([]core.Document, 0)
+	docId := uint(1)
+
 	// Loop through the path to get the contents first
 	for _, path := range paths {
 		// Get a new instance of the crawler for the specified path
@@ -18,17 +28,93 @@ func IndexBuilder(paths []string) {
 			continue
 		}
 
-		// Tokenize the file
-		tokens, err := TokenizeFile(path)
-		if err != nil {
-			logger.Errorf("Error tokenizing file %s: %+v", path, err)
+		logger.Debugf("Crawled %d files", len(crawlPaths))
+
+		for _, filePath := range crawlPaths {
+			logger.Debugf("Tokenizing file %s, %d", filePath, docId)
+			fileContents, err := storage.ReadFileContents(filePath)
+			if err != nil {
+				logger.Errorf("Error reading file %s: %+v", filePath, err)
+				continue
+			}
+
+			for _, content := range fileContents {
+				tokens := Tokenize(content)
+
+				// Store token frequencies
+				for _, token := range tokens {
+					tokenFrequency[token]++
+				}
+			}
+
+			// After the token map is created, we need to create the inverted index
+			for token, frequency := range tokenFrequency {
+				invertedIndex[token] = append(invertedIndex[token], core.Posting{
+					DocID: docId,
+					Freq:  frequency,
+				})
+			}
+
+			docs = append(docs, core.Document{
+				ID:         docId,
+				Path:       filepath.Clean(filePath),
+				TokenCount: uint(len(tokenFrequency)),
+			})
+
+			docId++
+		}
+	}
+
+	logger.Debugf("Total unique tokens: %d", len(tokenFrequency))
+	logger.Info("IndexBuilder completed")
+
+	// return the segment index
+	return &core.Segment{
+		Docs:          docs,
+		InvertedIndex: invertedIndex,
+		TotalDocs:     docId,
+		TotalTokens:   uint(len(tokenFrequency)),
+		AvgDocLen:     uint(len(tokenFrequency) / len(docs)),
+	}
+}
+
+// Tokenize takes file content as a string and returns a slice of normalized tokens.
+// It splits content into words, converts to lowercase, and filters out
+// purely numeric tokens and single-character tokens.
+func Tokenize(content string) []string {
+	var tokens []string
+
+	// Split content into words using whitespace and common delimiters
+	// This regex matches sequences of word characters (letters, digits, underscores)
+	wordRegex := regexp.MustCompile(`[\w]+`)
+	words := wordRegex.FindAllString(content, -1)
+
+	for _, word := range words {
+		// Normalize: convert to lowercase
+		token := strings.ToLower(word)
+
+		// Skip empty tokens or tokens that are purely numeric
+		if token == "" || isNumeric(token) {
 			continue
 		}
 
+		// Skip very short tokens (single characters) unless they're meaningful
+		if len(token) < 2 {
+			continue
+		}
+
+		tokens = append(tokens, token)
 	}
 
+	return tokens
 }
 
-func TokenizeFile(path string) ([]string, error) {
-
+// isNumeric checks if a string consists entirely of digits
+func isNumeric(s string) bool {
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }

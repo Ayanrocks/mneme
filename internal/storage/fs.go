@@ -2,10 +2,12 @@ package storage
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"mneme/internal/config"
 	"mneme/internal/constants"
+	"mneme/internal/core"
 	"mneme/internal/logger"
 	"mneme/internal/utils"
 	"mneme/internal/version"
@@ -411,4 +413,35 @@ func ReadFileContents(path string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func SaveSegmentIndex(segmentIndex *core.Segment) error {
+	logger.Info("Saving segment index...")
+
+	// Define the path for the segment JSON file
+	segmentPath := filepath.Join(constants.DirPath, "segments", "segment.json")
+
+	// Expand the file path (handles ~ expansion)
+	expandedPath, err := utils.ExpandFilePath(segmentPath)
+	if err != nil {
+		logger.Errorf("Error expanding segment path: %+v", err)
+		return fmt.Errorf("failed to expand segment path: %w", err)
+	}
+
+	// Marshal the segment index to JSON with indentation for readability
+	jsonData, err := json.MarshalIndent(segmentIndex, "", "  ")
+	if err != nil {
+		logger.Errorf("Error marshaling segment index to JSON: %+v", err)
+		return fmt.Errorf("failed to marshal segment index: %w", err)
+	}
+
+	// Write the JSON data to the file
+	err = os.WriteFile(expandedPath, jsonData, 0644)
+	if err != nil {
+		logger.Errorf("Error writing segment index to file %s: %+v", expandedPath, err)
+		return fmt.Errorf("failed to write segment index: %w", err)
+	}
+
+	logger.Infof("Segment index saved successfully to %s", expandedPath)
+	return nil
 }

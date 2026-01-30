@@ -3,6 +3,7 @@ package cli
 import (
 	"mneme/internal/config"
 	"mneme/internal/constants"
+	"mneme/internal/index"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
 
@@ -69,7 +70,14 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	// TO be done later
 
 	// Start reading the files from the paths
-	
-	
+	segmentIndex := index.IndexBuilder(paths)
 
+	// save the segment index to the data directory
+	err = storage.SaveSegmentIndex(segmentIndex)
+	if err != nil {
+		logger.Errorf("Failed to save segment index: %+v", err)
+		return
+	}
+
+	logger.Info("Indexing completed successfully")
 }

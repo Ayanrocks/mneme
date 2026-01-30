@@ -19,7 +19,7 @@ go.work
 
 # Binary files
 main
-mneme
+/mneme
 
 # IDE files
 .idea/

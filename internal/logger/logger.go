@@ -34,7 +34,7 @@ func Init(verbose bool, quiet bool, jsonOutput bool) {
 	}
 
 	// Set log level based on flags
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	if verbose {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
