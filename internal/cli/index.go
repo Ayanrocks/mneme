@@ -6,6 +6,7 @@ import (
 	"mneme/internal/index"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
+	"mneme/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -44,27 +45,44 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// check if a lock has been acquired in the data directory
-	err = storage.AcquireLock(constants.DirPath)
+	// Expand the data directory path (handle ~ expansion)
+	dataDir, err := utils.ExpandFilePath(constants.DirPath)
+	if err != nil {
+		logger.Errorf("Failed to expand data directory path: %+v", err)
+		return
+	}
+
+	// check if an existing lock is stale before trying to acquire
+	if err := storage.CheckLock(dataDir); err != nil {
+		// A lock exists, check if it's stale
+		isStale, staleErr := storage.IsLockStale(dataDir)
+		if staleErr != nil {
+			logger.Errorf("Failed to check if lock is stale: %+v", staleErr)
+			return
+		}
+
+		if isStale {
+			logger.Warn("Found stale lock, clearing it...")
+			if releaseErr := storage.ReleaseLock(dataDir); releaseErr != nil {
+				logger.Errorf("Failed to release stale lock: %+v", releaseErr)
+				return
+			}
+		} else {
+			// Lock is held by an active process
+			logger.Errorf("Failed to acquire lock: %+v", err)
+			return
+		}
+	}
+
+	// Now acquire the lock
+	err = storage.AcquireLock(dataDir)
 	if err != nil {
 		logger.Errorf("Failed to acquire lock: %+v", err)
 		return
 	}
 
 	// defer the release of the lock
-	defer storage.ReleaseLock(constants.DirPath)
-
-	// check if the lock is stale
-	isStale, err := storage.IsLockStale(constants.DirPath)
-	if err != nil {
-		logger.Errorf("Failed to check if lock is stale: %+v", err)
-		return
-	}
-
-	if isStale {
-		logger.Warn("Lock is stale. Please run 'mneme unlock' to remove it.")
-		return
-	}
+	defer storage.ReleaseLock(dataDir)
 
 	// TODO: check if the segments exists, then clear the directory and start fresh segmenting.
 	// TO be done later

@@ -72,6 +72,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(indexCmd)
+	rootCmd.AddCommand(findCmd)
 }
 
 // IsInitialized checks if the init command was run by verifying that the
@@ -146,7 +147,5 @@ func initCmdExecute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 		return
 	}
-
-	
 
 }

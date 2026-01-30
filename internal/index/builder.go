@@ -81,6 +81,7 @@ func IndexBuilder(paths []string) *core.Segment {
 // Tokenize takes file content as a string and returns a slice of normalized tokens.
 // It splits content into words, converts to lowercase, and filters out
 // purely numeric tokens and single-character tokens.
+// TODO: Make it more generic for programming languages and different types of files where spacing and word indexiing is difficult
 func Tokenize(content string) []string {
 	var tokens []string
 
