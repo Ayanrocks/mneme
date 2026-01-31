@@ -445,3 +445,30 @@ func SaveSegmentIndex(segmentIndex *core.Segment) error {
 	logger.Infof("Segment index saved successfully to %s", expandedPath)
 	return nil
 }
+
+func LoadSegmentIndex() (*core.Segment, error) {
+	logger.Info("Loading segment index...")
+
+	segmentPath := filepath.Join(constants.DirPath, "segments", "segment.json")
+	expandedPath, err := utils.ExpandFilePath(segmentPath)
+	if err != nil {
+		logger.Errorf("Error expanding segment path: %+v", err)
+		return nil, fmt.Errorf("failed to expand segment path: %w", err)
+	}
+
+	jsonData, err := os.ReadFile(expandedPath)
+	if err != nil {
+		logger.Errorf("Error reading segment index from file %s: %+v", expandedPath, err)
+		return nil, fmt.Errorf("failed to read segment index: %w", err)
+	}
+
+	var segmentIndex core.Segment
+	err = json.Unmarshal(jsonData, &segmentIndex)
+	if err != nil {
+		logger.Errorf("Error unmarshaling segment index from JSON: %+v", err)
+		return nil, fmt.Errorf("failed to unmarshal segment index: %w", err)
+	}
+
+	logger.Infof("Segment index loaded successfully from %s", expandedPath)
+	return &segmentIndex, nil
+}
