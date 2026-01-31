@@ -2,17 +2,17 @@ package query
 
 import (
 	"mneme/internal/core"
+	"mneme/internal/index"
 	"mneme/internal/logger"
-	"strings"
 )
 
 func ParseQuery(queryString string) []string {
 	logger.Info("Query string: " + queryString)
 
-	// split query string into words
-	words := strings.Fields(queryString)
+	// Use the same tokenization pipeline as indexing for BM25 consistency
+	tokens := index.TokenizeQuery(queryString)
 
-	return words
+	return tokens
 }
 
 func FindQueryToken(segment *core.Segment, tokens []string) []string {

@@ -5,9 +5,6 @@ import (
 	"mneme/internal/logger"
 	"mneme/internal/storage"
 	"path/filepath"
-	"regexp"
-	"strings"
-	"unicode"
 )
 
 func IndexBuilder(paths []string) *core.Segment {
@@ -79,43 +76,8 @@ func IndexBuilder(paths []string) *core.Segment {
 }
 
 // Tokenize takes file content as a string and returns a slice of normalized tokens.
-// It splits content into words, converts to lowercase, and filters out
-// purely numeric tokens and single-character tokens.
-// TODO: Make it more generic for programming languages and different types of files where spacing and word indexiing is difficult
+// It uses the generic tokenizer which supports camelCase, snake_case, kebab-case
+// identifiers, applies Porter stemming for BM25 consistency, and handles binary detection.
 func Tokenize(content string) []string {
-	var tokens []string
-
-	// Split content into words using whitespace and common delimiters
-	// This regex matches sequences of word characters (letters, digits, underscores)
-	wordRegex := regexp.MustCompile(`[\w]+`)
-	words := wordRegex.FindAllString(content, -1)
-
-	for _, word := range words {
-		// Normalize: convert to lowercase
-		token := strings.ToLower(word)
-
-		// Skip empty tokens or tokens that are purely numeric
-		if token == "" || isNumeric(token) {
-			continue
-		}
-
-		// Skip very short tokens (single characters) unless they're meaningful
-		if len(token) < 2 {
-			continue
-		}
-
-		tokens = append(tokens, token)
-	}
-
-	return tokens
-}
-
-// isNumeric checks if a string consists entirely of digits
-func isNumeric(s string) bool {
-	for _, r := range s {
-		if !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
+	return TokenizeContent(content)
 }
