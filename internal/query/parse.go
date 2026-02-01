@@ -16,32 +16,9 @@ func ParseQuery(queryString string) []string {
 }
 
 func FindQueryToken(segment *core.Segment, tokens []string) []string {
-	logger.Info("Finding query token in segments ")
+	logger.Info("Finding query token in segments using BM25+VSM ranking")
 
-	docHits := make(map[uint]uint)
-
-	for _, token := range tokens {
-		postings, ok := segment.InvertedIndex[token]
-		if !ok {
-			continue
-		}
-
-		for _, posting := range postings {
-			docHits[posting.DocID]++
-		}
-	}
-
-	docPaths := []string{}
-
-	logger.Debugf("Doc hits: %+v", docHits)
-
-	for docId, hits := range docHits {
-		for _, doc := range segment.Docs {
-			if doc.ID == docId && hits > 0 {
-				docPaths = append(docPaths, doc.Path)
-			}
-		}
-	}
-
-	return docPaths
+	// Use the ranking system that combines BM25 and VSM scores
+	// Limit results to top 20 documents for performance
+	return GetTopDocumentPaths(segment, tokens, MaxResults)
 }
