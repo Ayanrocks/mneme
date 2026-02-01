@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"mneme/internal/display"
 	"mneme/internal/logger"
 	"mneme/internal/query"
 	"mneme/internal/storage"
@@ -12,7 +13,7 @@ import (
 var findCmd = &cobra.Command{
 	Use:   "find",
 	Short: "Find documents",
-	Long:  "Find documents",
+	Long:  "Find documents matching the given query, showing relevant snippets",
 	Run:   findCmdExecute,
 }
 
@@ -41,6 +42,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 
 	logger.Info("Query string: " + queryString)
 
+	// Get stemmed tokens for BM25 ranking
 	queryTokens := query.ParseQuery(queryString)
 
 	// Read segments index from the file system
@@ -50,14 +52,38 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	foundedDocPaths := query.FindQueryToken(segmentIndex, queryTokens)
+	// Get ranked documents with scores
+	rankedDocs := query.RankDocuments(segmentIndex, queryTokens, query.MaxResults)
 
-	if len(foundedDocPaths) == 0 {
-		logger.Info("No documents found for query: " + queryString)
+	if len(rankedDocs) == 0 {
+		logger.PrintError("No documents found for query: %s", queryString)
 		return
 	}
 
-	for _, docPath := range foundedDocPaths {
-		logger.Info("Found doc path: " + docPath)
+	// Extract original query words (not stemmed) for snippet matching
+	originalQueryWords := strings.Fields(queryString)
+
+	// Build search results with snippets - only include results with actual matches
+	var results []*display.SearchResult
+	for _, doc := range rankedDocs {
+		result, err := display.FormatSearchResult(doc.Path, originalQueryWords, doc.Score)
+		if err != nil {
+			logger.Debugf("Failed to format result for %s: %v", doc.Path, err)
+			continue
+		}
+
+		// Only include results that have actual text matches (snippets)
+		// This filters out false positives from BM25 stemming
+		if len(result.Snippets) > 0 {
+			results = append(results, result)
+		}
 	}
+
+	if len(results) == 0 {
+		logger.PrintError("No matching documents found for: %s", queryString)
+		return
+	}
+
+	// Print formatted results
+	display.PrintResults(results, true, queryString)
 }
