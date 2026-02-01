@@ -8,6 +8,7 @@ import (
 	"mneme/internal/config"
 	"mneme/internal/constants"
 	"mneme/internal/core"
+	"mneme/internal/core/pb"
 	"mneme/internal/logger"
 	"mneme/internal/utils"
 	"mneme/internal/version"
@@ -15,6 +16,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // CreateDir Create directory function
@@ -415,8 +418,14 @@ func ReadFileContents(path string) ([]string, error) {
 	return lines, nil
 }
 
+// SaveSegmentIndex saves the segment index using the binary protobuf format (default)
 func SaveSegmentIndex(segmentIndex *core.Segment) error {
-	logger.Info("Saving segment index...")
+	return SaveSegmentIndexBinary(segmentIndex)
+}
+
+// SaveSegmentIndexJSON saves the segment index in JSON format (legacy)
+func SaveSegmentIndexJSON(segmentIndex *core.Segment) error {
+	logger.Info("Saving segment index (JSON)...")
 
 	// Define the path for the segment JSON file
 	segmentPath := filepath.Join(constants.DirPath, "segments", "segment.json")
@@ -446,8 +455,33 @@ func SaveSegmentIndex(segmentIndex *core.Segment) error {
 	return nil
 }
 
+// LoadSegmentIndex loads the segment index, auto-detecting the format
+// It first tries binary format (.idx), then falls back to JSON for backward compatibility
 func LoadSegmentIndex() (*core.Segment, error) {
 	logger.Info("Loading segment index...")
+
+	// First, try to load binary format (preferred)
+	binaryPath := filepath.Join(constants.DirPath, "segments", "segment.idx")
+	expandedBinaryPath, err := utils.ExpandFilePath(binaryPath)
+	if err != nil {
+		logger.Errorf("Error expanding binary segment path: %+v", err)
+		return nil, fmt.Errorf("failed to expand segment path: %w", err)
+	}
+
+	// Check if binary file exists
+	if _, err := os.Stat(expandedBinaryPath); err == nil {
+		logger.Debug("Found binary segment file, loading...")
+		return LoadSegmentIndexBinary()
+	}
+
+	// Fall back to JSON format
+	logger.Debug("Binary segment not found, trying JSON format...")
+	return LoadSegmentIndexJSON()
+}
+
+// LoadSegmentIndexJSON loads the segment index from JSON format (legacy)
+func LoadSegmentIndexJSON() (*core.Segment, error) {
+	logger.Info("Loading segment index (JSON)...")
 
 	segmentPath := filepath.Join(constants.DirPath, "segments", "segment.json")
 	expandedPath, err := utils.ExpandFilePath(segmentPath)
@@ -471,4 +505,69 @@ func LoadSegmentIndex() (*core.Segment, error) {
 
 	logger.Infof("Segment index loaded successfully from %s", expandedPath)
 	return &segmentIndex, nil
+}
+
+// SaveSegmentIndexBinary saves the segment index in binary protobuf format (.idx file)
+func SaveSegmentIndexBinary(segmentIndex *core.Segment) error {
+	logger.Info("Saving segment index in binary format...")
+
+	// Define the path for the segment binary file
+	segmentPath := filepath.Join(constants.DirPath, "segments", "segment.idx")
+
+	// Expand the file path (handles ~ expansion)
+	expandedPath, err := utils.ExpandFilePath(segmentPath)
+	if err != nil {
+		logger.Errorf("Error expanding segment path: %+v", err)
+		return fmt.Errorf("failed to expand segment path: %w", err)
+	}
+
+	// Convert to protobuf format
+	pbSegment := segmentIndex.ToPB()
+
+	// Marshal to binary protobuf
+	binaryData, err := proto.Marshal(pbSegment)
+	if err != nil {
+		logger.Errorf("Error marshaling segment index to protobuf: %+v", err)
+		return fmt.Errorf("failed to marshal segment index: %w", err)
+	}
+
+	// Write the binary data to the file
+	err = os.WriteFile(expandedPath, binaryData, 0644)
+	if err != nil {
+		logger.Errorf("Error writing segment index to file %s: %+v", expandedPath, err)
+		return fmt.Errorf("failed to write segment index: %w", err)
+	}
+
+	logger.Infof("Segment index saved successfully to %s (binary, %d bytes)", expandedPath, len(binaryData))
+	return nil
+}
+
+// LoadSegmentIndexBinary loads the segment index from binary protobuf format (.idx file)
+func LoadSegmentIndexBinary() (*core.Segment, error) {
+	logger.Info("Loading segment index from binary format...")
+
+	segmentPath := filepath.Join(constants.DirPath, "segments", "segment.idx")
+	expandedPath, err := utils.ExpandFilePath(segmentPath)
+	if err != nil {
+		logger.Errorf("Error expanding segment path: %+v", err)
+		return nil, fmt.Errorf("failed to expand segment path: %w", err)
+	}
+
+	binaryData, err := os.ReadFile(expandedPath)
+	if err != nil {
+		logger.Errorf("Error reading segment index from file %s: %+v", expandedPath, err)
+		return nil, fmt.Errorf("failed to read segment index: %w", err)
+	}
+
+	var pbSegment pb.Segment
+	err = proto.Unmarshal(binaryData, &pbSegment)
+	if err != nil {
+		logger.Errorf("Error unmarshaling segment index from protobuf: %+v", err)
+		return nil, fmt.Errorf("failed to unmarshal segment index: %w", err)
+	}
+
+	segment := core.SegmentFromPB(&pbSegment)
+
+	logger.Infof("Segment index loaded successfully from %s (binary, %d bytes)", expandedPath, len(binaryData))
+	return segment, nil
 }

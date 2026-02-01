@@ -1,0 +1,30 @@
+syntax = "proto3";
+package mneme;
+option go_package = "mneme/internal/core/pb";
+
+// Document represents an indexed file
+message Document {
+  uint32 id = 1;
+  string path = 2;
+  uint32 token_count = 3;
+}
+
+// Posting represents a term occurrence in a document
+message Posting {
+  uint32 doc_id = 1;
+  uint32 freq = 2;
+}
+
+// PostingList holds all postings for a single term
+message PostingList {
+  repeated Posting postings = 1;
+}
+
+// Segment is the main index structure
+message Segment {
+  repeated Document docs = 1;
+  map<string, PostingList> inverted_index = 2;
+  uint32 total_docs = 3;
+  uint32 total_tokens = 4;
+  uint32 avg_doc_len = 5;
+}
