@@ -456,11 +456,24 @@ func SaveSegmentIndexJSON(segmentIndex *core.Segment) error {
 }
 
 // LoadSegmentIndex loads the segment index, auto-detecting the format
-// It first tries binary format (.idx), then falls back to JSON for backward compatibility
+// Priority: 1) manifest.json (chunk-based), 2) segment.idx (binary), 3) segment.json (legacy)
 func LoadSegmentIndex() (*core.Segment, error) {
 	logger.Info("Loading segment index...")
 
-	// First, try to load binary format (preferred)
+	// First, check if manifest exists (new chunk-based format)
+	manifestPath := filepath.Join(constants.DirPath, "segments", "manifest.json")
+	expandedManifestPath, err := utils.ExpandFilePath(manifestPath)
+	if err != nil {
+		logger.Errorf("Error expanding manifest path: %+v", err)
+		return nil, fmt.Errorf("failed to expand manifest path: %w", err)
+	}
+
+	if _, err := os.Stat(expandedManifestPath); err == nil {
+		logger.Debug("Found manifest, loading chunks...")
+		return LoadAllChunks()
+	}
+
+	// Fall back to legacy binary format (segment.idx)
 	binaryPath := filepath.Join(constants.DirPath, "segments", "segment.idx")
 	expandedBinaryPath, err := utils.ExpandFilePath(binaryPath)
 	if err != nil {
@@ -468,7 +481,6 @@ func LoadSegmentIndex() (*core.Segment, error) {
 		return nil, fmt.Errorf("failed to expand segment path: %w", err)
 	}
 
-	// Check if binary file exists
 	if _, err := os.Stat(expandedBinaryPath); err == nil {
 		logger.Debug("Found binary segment file, loading...")
 		return LoadSegmentIndexBinary()
@@ -570,4 +582,227 @@ func LoadSegmentIndexBinary() (*core.Segment, error) {
 
 	logger.Infof("Segment index loaded successfully from %s (binary, %d bytes)", expandedPath, len(binaryData))
 	return segment, nil
+}
+
+// ============================================================================
+// Chunk-based storage functions for LSM-style batch indexing
+// ============================================================================
+
+// SaveChunk saves a segment chunk as a numbered file (e.g., 001.idx, 002.idx)
+func SaveChunk(chunk *core.Segment, chunkID int) error {
+	logger.Infof("Saving chunk %03d...", chunkID)
+
+	// Format chunk filename with zero-padding
+	chunkFilename := fmt.Sprintf("%03d.idx", chunkID)
+	chunkPath := filepath.Join(constants.DirPath, "segments", chunkFilename)
+
+	expandedPath, err := utils.ExpandFilePath(chunkPath)
+	if err != nil {
+		logger.Errorf("Error expanding chunk path: %+v", err)
+		return fmt.Errorf("failed to expand chunk path: %w", err)
+	}
+
+	// Convert to protobuf and marshal
+	pbSegment := chunk.ToPB()
+	binaryData, err := proto.Marshal(pbSegment)
+	if err != nil {
+		logger.Errorf("Error marshaling chunk to protobuf: %+v", err)
+		return fmt.Errorf("failed to marshal chunk: %w", err)
+	}
+
+	// Write to file
+	err = os.WriteFile(expandedPath, binaryData, 0644)
+	if err != nil {
+		logger.Errorf("Error writing chunk to file %s: %+v", expandedPath, err)
+		return fmt.Errorf("failed to write chunk: %w", err)
+	}
+
+	logger.Infof("Chunk %03d saved successfully (%d bytes)", chunkID, len(binaryData))
+	return nil
+}
+
+// LoadChunk loads a specific chunk by ID
+func LoadChunk(chunkID int) (*core.Segment, error) {
+	logger.Debugf("Loading chunk %03d...", chunkID)
+
+	chunkFilename := fmt.Sprintf("%03d.idx", chunkID)
+	chunkPath := filepath.Join(constants.DirPath, "segments", chunkFilename)
+
+	expandedPath, err := utils.ExpandFilePath(chunkPath)
+	if err != nil {
+		logger.Errorf("Error expanding chunk path: %+v", err)
+		return nil, fmt.Errorf("failed to expand chunk path: %w", err)
+	}
+
+	binaryData, err := os.ReadFile(expandedPath)
+	if err != nil {
+		logger.Errorf("Error reading chunk from file %s: %+v", expandedPath, err)
+		return nil, fmt.Errorf("failed to read chunk: %w", err)
+	}
+
+	var pbSegment pb.Segment
+	err = proto.Unmarshal(binaryData, &pbSegment)
+	if err != nil {
+		logger.Errorf("Error unmarshaling chunk from protobuf: %+v", err)
+		return nil, fmt.Errorf("failed to unmarshal chunk: %w", err)
+	}
+
+	segment := core.SegmentFromPB(&pbSegment)
+	logger.Debugf("Chunk %03d loaded successfully (%d bytes)", chunkID, len(binaryData))
+	return segment, nil
+}
+
+// SaveManifest saves the manifest as JSON in the segments directory
+func SaveManifest(manifest *core.Manifest) error {
+	logger.Info("Saving manifest...")
+
+	manifestPath := filepath.Join(constants.DirPath, "segments", "manifest.json")
+	expandedPath, err := utils.ExpandFilePath(manifestPath)
+	if err != nil {
+		logger.Errorf("Error expanding manifest path: %+v", err)
+		return fmt.Errorf("failed to expand manifest path: %w", err)
+	}
+
+	jsonData, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		logger.Errorf("Error marshaling manifest to JSON: %+v", err)
+		return fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	err = os.WriteFile(expandedPath, jsonData, 0644)
+	if err != nil {
+		logger.Errorf("Error writing manifest to file %s: %+v", expandedPath, err)
+		return fmt.Errorf("failed to write manifest: %w", err)
+	}
+
+	logger.Infof("Manifest saved successfully to %s", expandedPath)
+	return nil
+}
+
+// LoadManifest loads the manifest from the segments directory
+func LoadManifest() (*core.Manifest, error) {
+	logger.Info("Loading manifest...")
+
+	manifestPath := filepath.Join(constants.DirPath, "segments", "manifest.json")
+	expandedPath, err := utils.ExpandFilePath(manifestPath)
+	if err != nil {
+		logger.Errorf("Error expanding manifest path: %+v", err)
+		return nil, fmt.Errorf("failed to expand manifest path: %w", err)
+	}
+
+	jsonData, err := os.ReadFile(expandedPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			logger.Debug("Manifest does not exist")
+			return nil, nil // Return nil manifest if not found (not an error)
+		}
+		logger.Errorf("Error reading manifest from file %s: %+v", expandedPath, err)
+		return nil, fmt.Errorf("failed to read manifest: %w", err)
+	}
+
+	var manifest core.Manifest
+	err = json.Unmarshal(jsonData, &manifest)
+	if err != nil {
+		logger.Errorf("Error unmarshaling manifest from JSON: %+v", err)
+		return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
+	}
+
+	logger.Infof("Manifest loaded successfully with %d chunks", len(manifest.Chunks))
+	return &manifest, nil
+}
+
+// LoadAllChunks loads all complete chunks and merges them into a single segment
+func LoadAllChunks() (*core.Segment, error) {
+	logger.Info("Loading all chunks...")
+
+	// First try to load manifest
+	manifest, err := LoadManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load manifest: %w", err)
+	}
+
+	// If no manifest exists, fall back to legacy single segment
+	if manifest == nil {
+		logger.Debug("No manifest found, trying legacy segment format...")
+		return LoadSegmentIndexBinary()
+	}
+
+	// Get only complete chunks
+	completeChunks := manifest.GetCompleteChunks()
+	if len(completeChunks) == 0 {
+		logger.Warn("No complete chunks found in manifest")
+		return nil, fmt.Errorf("no complete chunks found")
+	}
+
+	// Merge all chunks into a single segment
+	mergedDocs := make([]core.Document, 0)
+	mergedIndex := make(map[string][]core.Posting)
+
+	for _, chunkInfo := range completeChunks {
+		chunk, err := LoadChunk(chunkInfo.ID)
+		if err != nil {
+			logger.Errorf("Error loading chunk %d: %+v", chunkInfo.ID, err)
+			return nil, fmt.Errorf("failed to load chunk %d: %w", chunkInfo.ID, err)
+		}
+
+		// Merge documents
+		mergedDocs = append(mergedDocs, chunk.Docs...)
+
+		// Merge inverted index
+		for term, postings := range chunk.InvertedIndex {
+			mergedIndex[term] = append(mergedIndex[term], postings...)
+		}
+	}
+
+	mergedSegment := &core.Segment{
+		Docs:          mergedDocs,
+		InvertedIndex: mergedIndex,
+		TotalDocs:     manifest.TotalDocs,
+		TotalTokens:   manifest.TotalTokens,
+		AvgDocLen:     manifest.AvgDocLen,
+	}
+
+	logger.Infof("Merged %d chunks into single segment (%d docs, %d tokens)",
+		len(completeChunks), len(mergedDocs), len(mergedIndex))
+	return mergedSegment, nil
+}
+
+// ClearSegments removes all chunk files and manifest from the segments directory
+func ClearSegments() error {
+	logger.Info("Clearing segments directory...")
+
+	segmentsPath := filepath.Join(constants.DirPath, "segments")
+	expandedPath, err := utils.ExpandFilePath(segmentsPath)
+	if err != nil {
+		logger.Errorf("Error expanding segments path: %+v", err)
+		return fmt.Errorf("failed to expand segments path: %w", err)
+	}
+
+	// Read directory contents
+	entries, err := os.ReadDir(expandedPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			logger.Debug("Segments directory does not exist, nothing to clear")
+			return nil
+		}
+		logger.Errorf("Error reading segments directory: %+v", err)
+		return fmt.Errorf("failed to read segments directory: %w", err)
+	}
+
+	// Remove all files in the directory
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue // Skip subdirectories
+		}
+		filePath := filepath.Join(expandedPath, entry.Name())
+		err = os.Remove(filePath)
+		if err != nil {
+			logger.Errorf("Error removing file %s: %+v", filePath, err)
+			return fmt.Errorf("failed to remove file %s: %w", entry.Name(), err)
+		}
+		logger.Debugf("Removed: %s", entry.Name())
+	}
+
+	logger.Info("Segments directory cleared successfully")
+	return nil
 }

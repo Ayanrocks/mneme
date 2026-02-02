@@ -2,7 +2,7 @@ package query
 
 import (
 	"mneme/internal/core"
-	"sort"
+	"mneme/internal/utils"
 )
 
 // MaxResults is the default limit for search results
@@ -21,11 +21,20 @@ type RankedDocument struct {
 	Score float64
 }
 
-// RankDocuments sorts documents by their combined BM25+VSM score
-// and returns the top N results
+// GetScore implements utils.Scored interface
+func (r RankedDocument) GetScore() float64 {
+	return r.Score
+}
+
+// RankDocuments uses a min-heap to efficiently find the top N documents
+// by their combined BM25+VSM score. Time complexity: O(n log k) where k is the limit
 func RankDocuments(segment *core.Segment, tokens []string, limit int) []RankedDocument {
 	if segment == nil || len(tokens) == 0 {
 		return []RankedDocument{}
+	}
+
+	if limit <= 0 {
+		limit = MaxResults
 	}
 
 	// Calculate BM25 scores
@@ -37,18 +46,17 @@ func RankDocuments(segment *core.Segment, tokens []string, limit int) []RankedDo
 	// Combine scores
 	combinedScores := CombineScores(bm25Scores, vsmScores, BM25Weight, VSMWeight)
 
-	// Convert to ranked documents
-	ranked := make([]RankedDocument, 0, len(combinedScores))
-
 	// Build document ID to path map
 	docPaths := make(map[uint]string)
 	for _, doc := range segment.Docs {
 		docPaths[doc.ID] = doc.Path
 	}
 
+	// Build candidate documents with positive scores
+	candidates := make([]RankedDocument, 0, len(combinedScores))
 	for docID, score := range combinedScores {
 		if score > 0 {
-			ranked = append(ranked, RankedDocument{
+			candidates = append(candidates, RankedDocument{
 				DocID: docID,
 				Path:  docPaths[docID],
 				Score: score,
@@ -56,17 +64,8 @@ func RankDocuments(segment *core.Segment, tokens []string, limit int) []RankedDo
 		}
 	}
 
-	// Sort by score (descending)
-	sort.Slice(ranked, func(i, j int) bool {
-		return ranked[i].Score > ranked[j].Score
-	})
-
-	// Apply limit
-	if limit > 0 && len(ranked) > limit {
-		ranked = ranked[:limit]
-	}
-
-	return ranked
+	// Use heap-based TopK to get the highest scoring documents
+	return utils.TopK(candidates, limit)
 }
 
 // GetTopDocumentPaths ranks documents and returns only the file paths

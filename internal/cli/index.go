@@ -14,7 +14,7 @@ import (
 var indexCmd = &cobra.Command{
 	Use:   "index",
 	Short: "Create an index",
-	Long:  "Create an index",
+	Long:  "Create an index using LSM-style batch processing to reduce memory usage",
 	Run:   indexCmdExecute,
 }
 
@@ -84,8 +84,13 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	// defer the release of the lock
 	defer storage.ReleaseLock(dataDir)
 
-	// TODO: check if the segments exists, then clear the directory and start fresh segmenting.
-	// TO be done later
+	// Clear existing segments before re-indexing
+	logger.Info("Clearing existing segments...")
+	err = storage.ClearSegments()
+	if err != nil {
+		logger.Errorf("Failed to clear segments: %+v", err)
+		return
+	}
 
 	crawlerOptions := storage.CrawlerOptions{
 		IncludeExtensions: config.Sources.IncludeExtensions,
@@ -94,15 +99,23 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		IncludeHidden:     false,
 	}
 
-	// Start reading the files from the paths
-	segmentIndex := index.IndexBuilder(paths, &crawlerOptions)
+	// Use batch indexing to reduce memory usage
+	// Default batch size is 1000 files per batch
+	batchConfig := index.DefaultBatchConfig()
 
-	// save the segment index to the data directory
-	err = storage.SaveSegmentIndex(segmentIndex)
+	logger.Infof("Starting batch indexing (batch size: %d files)", batchConfig.BatchSize)
+
+	manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
 	if err != nil {
-		logger.Errorf("Failed to save segment index: %+v", err)
+		logger.Errorf("Failed to build index: %+v", err)
 		return
 	}
 
-	logger.Info("Indexing completed successfully")
+	if manifest == nil {
+		logger.Warn("No files were indexed")
+		return
+	}
+
+	logger.Infof("Indexing completed successfully: %d chunks, %d docs, %d tokens",
+		len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
 }
