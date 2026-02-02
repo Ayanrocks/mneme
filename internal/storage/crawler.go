@@ -12,8 +12,9 @@ import (
 
 // CrawlerOptions contains configuration for the file crawler
 type CrawlerOptions struct {
-	// SkipExtensions is a list of file extensions to skip (without the leading dot, e.g., "txt", "log")
-	SkipExtensions []string
+	// IncludeExtensions is a list of file extensions to include (without the leading dot, e.g., "go", "py")
+	// If empty, all extensions are included. If non-empty, only files with these extensions are included.
+	IncludeExtensions []string
 
 	// SkipFolders is a list of folder names to skip entirely
 	SkipFolders []string
@@ -30,7 +31,7 @@ type CrawlerOptions struct {
 // DefaultCrawlerOptions returns a CrawlerOptions with sensible defaults
 func DefaultCrawlerOptions() CrawlerOptions {
 	return CrawlerOptions{
-		SkipExtensions:    []string{},
+		IncludeExtensions: []string{},
 		SkipFolders:       []string{".git", "node_modules", ".svn", ".hg", "__pycache__", ".idea", ".vscode"},
 		MaxFilesPerFolder: 0, // No limit by default
 		IncludeHidden:     false,
@@ -75,10 +76,10 @@ func Crawler(inputPath string, options CrawlerOptions) ([]string, error) {
 	logger.Debugf("Starting crawl of directory: %s", expandedPath)
 
 	var results []string
-	skipExtMap := buildExtensionMap(options.SkipExtensions)
+	includeExtMap := buildExtensionMap(options.IncludeExtensions)
 	skipFolderMap := buildFolderMap(options.SkipFolders)
 
-	err = crawlDirectory(expandedPath, &results, skipExtMap, skipFolderMap, options)
+	err = crawlDirectory(expandedPath, &results, includeExtMap, skipFolderMap, options)
 	if err != nil {
 		logger.Errorf("Error during crawl: %+v", err)
 		return nil, err
@@ -89,7 +90,7 @@ func Crawler(inputPath string, options CrawlerOptions) ([]string, error) {
 }
 
 // crawlDirectory recursively crawls a directory and appends file paths to results
-func crawlDirectory(dirPath string, results *[]string, skipExtMap map[string]bool, skipFolderMap map[string]bool, options CrawlerOptions) error {
+func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]bool, skipFolderMap map[string]bool, options CrawlerOptions) error {
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
 		logger.Errorf("Error reading directory %s: %+v", dirPath, err)
@@ -123,16 +124,19 @@ func crawlDirectory(dirPath string, results *[]string, skipExtMap map[string]boo
 			}
 
 			// Recursively crawl subdirectory
-			err := crawlDirectory(entryPath, results, skipExtMap, skipFolderMap, options)
+			err := crawlDirectory(entryPath, results, includeExtMap, skipFolderMap, options)
 			if err != nil {
 				// Log the error but continue with other entries
 				logger.Warnf("Error crawling subdirectory %s: %+v", entryPath, err)
 			}
 		} else {
-			// It's a file, check if it should be included
+			// It's a file, check if it should be included based on extension
 			ext := getFileExtension(entryName)
-			if skipExtMap[ext] {
-				logger.Debugf("Skipping file due to extension: %s", entryPath)
+
+			// If includeExtMap is non-empty, only include files with matching extensions
+			// If includeExtMap is empty, include all files
+			if len(includeExtMap) > 0 && !includeExtMap[ext] {
+				logger.Debugf("Skipping file due to extension filter: %s", entryPath)
 				continue
 			}
 
@@ -152,10 +156,17 @@ func shouldSkipFile(filePath string, options CrawlerOptions) bool {
 		return true
 	}
 
-	// Check extension
-	ext := getFileExtension(fileName)
-	for _, skipExt := range options.SkipExtensions {
-		if strings.EqualFold(ext, skipExt) {
+	// Check extension - if IncludeExtensions is non-empty, only include matching extensions
+	if len(options.IncludeExtensions) > 0 {
+		ext := getFileExtension(fileName)
+		found := false
+		for _, includeExt := range options.IncludeExtensions {
+			if strings.EqualFold(ext, includeExt) {
+				found = true
+				break
+			}
+		}
+		if !found {
 			return true
 		}
 	}

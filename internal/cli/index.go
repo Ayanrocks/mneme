@@ -87,8 +87,15 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	// TODO: check if the segments exists, then clear the directory and start fresh segmenting.
 	// TO be done later
 
+	crawlerOptions := storage.CrawlerOptions{
+		IncludeExtensions: config.Sources.IncludeExtensions,
+		SkipFolders:       config.Sources.Ignore,
+		MaxFilesPerFolder: 0,
+		IncludeHidden:     false,
+	}
+
 	// Start reading the files from the paths
-	segmentIndex := index.IndexBuilder(paths)
+	segmentIndex := index.IndexBuilder(paths, &crawlerOptions)
 
 	// save the segment index to the data directory
 	err = storage.SaveSegmentIndex(segmentIndex)

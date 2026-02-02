@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func IndexBuilder(paths []string) *core.Segment {
+func IndexBuilder(paths []string, crawlerOptions *storage.CrawlerOptions) *core.Segment {
 	logger.Info("Starting IndexBuilder")
 
 	// Token frequency map: token -> frequency count
@@ -19,7 +19,7 @@ func IndexBuilder(paths []string) *core.Segment {
 	// Loop through the path to get the contents first
 	for _, path := range paths {
 		// Get a new instance of the crawler for the specified path
-		crawlPaths, err := storage.Crawler(path, storage.DefaultCrawlerOptions())
+		crawlPaths, err := storage.Crawler(path, *crawlerOptions)
 		if err != nil {
 			logger.Errorf("Error crawling path %s: %+v", path, err)
 			continue
