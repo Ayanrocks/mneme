@@ -20,6 +20,7 @@ type IndexConfig struct {
 type SourcesConfig struct {
 	Paths             []string `toml:"paths"`
 	IncludeExtensions []string `toml:"include_extensions"`
+	ExcludeExtensions []string `toml:"exclude_extensions"`
 	Ignore            []string `toml:"ignore"`
 }
 
