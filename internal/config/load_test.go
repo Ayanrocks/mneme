@@ -48,10 +48,8 @@ func TestDefaultConfigWriter(t *testing.T) {
 		assert.Contains(t, configStr, "language = 'en'")
 
 		// Check ranking defaults
-		assert.Contains(t, configStr, "tfidf_weight = 1")
-		assert.Contains(t, configStr, "recency_weight = 0.3")
-		assert.Contains(t, configStr, "title_boost = 1.5")
-		assert.Contains(t, configStr, "path_boost = 1.2")
+		assert.Contains(t, configStr, "bm25_weight = 0.7")
+		assert.Contains(t, configStr, "vsm_weight = 0.3")
 		assert.Contains(t, configStr, "recency_half_life_days = 30")
 
 		// Check logging defaults
@@ -109,10 +107,8 @@ func TestDefaultConfig(t *testing.T) {
 	t.Run("has correct ranking defaults", func(t *testing.T) {
 		config := DefaultConfig
 
-		assert.Equal(t, 1.0, config.Ranking.TFIDFWeight)
-		assert.Equal(t, 0.3, config.Ranking.RecencyWeight)
-		assert.Equal(t, 1.5, config.Ranking.TitleBoost)
-		assert.Equal(t, 1.2, config.Ranking.PathBoost)
+		assert.Equal(t, 0.7, config.Ranking.BM25Weight)
+		assert.Equal(t, 0.3, config.Ranking.VSMWeight)
 		assert.Equal(t, 30, config.Ranking.RecencyHalfLifeDays)
 	})
 
@@ -150,10 +146,8 @@ func TestConfigMarshaling(t *testing.T) {
 				Language:     "es",
 			},
 			Ranking: core.RankingConfig{
-				TFIDFWeight:         2.0,
-				RecencyWeight:       0.5,
-				TitleBoost:          2.0,
-				PathBoost:           1.5,
+				BM25Weight:          0.8,
+				VSMWeight:           0.2,
 				RecencyHalfLifeDays: 60,
 			},
 			Logging: core.LoggingConfig{
@@ -213,10 +207,8 @@ func TestConfigFileOperations(t *testing.T) {
 				Language:     "en",
 			},
 			Ranking: core.RankingConfig{
-				TFIDFWeight:         1.0,
-				RecencyWeight:       0.3,
-				TitleBoost:          1.5,
-				PathBoost:           1.2,
+				BM25Weight:          0.7,
+				VSMWeight:           0.3,
 				RecencyHalfLifeDays: 30,
 			},
 			Logging: core.LoggingConfig{

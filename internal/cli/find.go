@@ -60,7 +60,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	// Get ranked documents with scores
-	rankedDocs := query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit)
+	rankedDocs := query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit, &config.Ranking)
 
 	if len(rankedDocs) == 0 {
 		logger.PrintError("No documents found for query: %s", queryString)

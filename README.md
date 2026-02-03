@@ -98,3 +98,40 @@ mneme/
 └── VERSION                 # Storage format version
 
 ```
+
+
+```toml
+version = 1
+
+[index]
+segment_size = 500
+max_tokens_per_document = 10000
+reindex_on_modify = true
+skip_binary_files = true
+
+[sources]
+paths = ['/Users/ayanrocks/Developer/TextTesting', '/Users/ayanrocks/Developer/Krikad-Be', '/Users/ayanrocks/Developer/PrismPlay', '/Users/ayanrocks/Developer/TripYatra', '/Users/ayanrocks/Developer/starship']
+include_extensions = []
+ignore = ['.git', 'node_modules', '.vscode', '.idea', 'vendor', '.cache', 'target', 'build']
+
+[watcher]
+enabled = true
+debounce_ms = 500
+
+[search]
+default_limit = 40
+use_stopwords = true
+language = 'en'
+
+[ranking]
+tfidf_weight = 1.0
+recency_weight = 0.3
+title_boost = 1.5
+path_boost = 1.2
+recency_half_life_days = 30
+
+[logging]
+level = 'info'
+json = true
+
+```

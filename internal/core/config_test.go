@@ -31,10 +31,8 @@ func TestDefaultConfigStructure(t *testing.T) {
 				Language:     "en",
 			},
 			Ranking: RankingConfig{
-				TFIDFWeight:         1,
-				RecencyWeight:       0.3,
-				TitleBoost:          1.5,
-				PathBoost:           1.2,
+				BM25Weight:          0.7,
+				VSMWeight:           0.3,
 				RecencyHalfLifeDays: 30,
 			},
 			Logging: LoggingConfig{
@@ -212,39 +210,29 @@ func TestSearchConfig(t *testing.T) {
 func TestRankingConfig(t *testing.T) {
 	t.Run("has correct default values", func(t *testing.T) {
 		config := RankingConfig{
-			TFIDFWeight:         1.0,
-			RecencyWeight:       0.3,
-			TitleBoost:          1.5,
-			PathBoost:           1.2,
+			BM25Weight:          0.7,
+			VSMWeight:           0.3,
 			RecencyHalfLifeDays: 30,
 		}
 
-		assert.Equal(t, 1.0, config.TFIDFWeight)
-		assert.Equal(t, 0.3, config.RecencyWeight)
-		assert.Equal(t, 1.5, config.TitleBoost)
-		assert.Equal(t, 1.2, config.PathBoost)
+		assert.Equal(t, 0.7, config.BM25Weight)
+		assert.Equal(t, 0.3, config.VSMWeight)
 		assert.Equal(t, 30, config.RecencyHalfLifeDays)
 	})
 
 	t.Run("can adjust weights", func(t *testing.T) {
 		config := RankingConfig{
-			TFIDFWeight:         1.0,
-			RecencyWeight:       0.3,
-			TitleBoost:          1.5,
-			PathBoost:           1.2,
+			BM25Weight:          0.7,
+			VSMWeight:           0.3,
 			RecencyHalfLifeDays: 30,
 		}
 
-		config.TFIDFWeight = 2.0
-		config.RecencyWeight = 0.5
-		config.TitleBoost = 2.0
-		config.PathBoost = 1.5
+		config.BM25Weight = 0.8
+		config.VSMWeight = 0.2
 		config.RecencyHalfLifeDays = 60
 
-		assert.Equal(t, 2.0, config.TFIDFWeight)
-		assert.Equal(t, 0.5, config.RecencyWeight)
-		assert.Equal(t, 2.0, config.TitleBoost)
-		assert.Equal(t, 1.5, config.PathBoost)
+		assert.Equal(t, 0.8, config.BM25Weight)
+		assert.Equal(t, 0.2, config.VSMWeight)
 		assert.Equal(t, 60, config.RecencyHalfLifeDays)
 	})
 }

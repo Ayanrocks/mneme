@@ -38,10 +38,8 @@ var DefaultConfig = core.Config{
 		Language:     "en",
 	},
 	Ranking: core.RankingConfig{
-		TFIDFWeight:         1,
-		RecencyWeight:       0.3,
-		TitleBoost:          1.5,
-		PathBoost:           1.2,
+		BM25Weight:          0.7,
+		VSMWeight:           0.3,
 		RecencyHalfLifeDays: 30,
 	},
 	Logging: core.LoggingConfig{

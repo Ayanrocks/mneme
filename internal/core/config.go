@@ -36,10 +36,8 @@ type SearchConfig struct {
 }
 
 type RankingConfig struct {
-	TFIDFWeight         float64 `toml:"tfidf_weight"`
-	RecencyWeight       float64 `toml:"recency_weight"`
-	TitleBoost          float64 `toml:"title_boost"`
-	PathBoost           float64 `toml:"path_boost"`
+	BM25Weight          float64 `toml:"bm25_weight"`
+	VSMWeight           float64 `toml:"vsm_weight"`
 	RecencyHalfLifeDays int     `toml:"recency_half_life_days"`
 }
 

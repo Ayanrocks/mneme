@@ -8,10 +8,10 @@ import (
 // MaxResults is the default limit for search results
 const MaxResults = 20
 
-// Weights for combining BM25 and VSM scores
+// Default weights for combining BM25 and VSM scores (used when config values are invalid)
 const (
-	BM25Weight = 0.7 // Primary relevance signal
-	VSMWeight  = 0.3 // Similarity refinement
+	DefaultBM25Weight = 0.7 // Primary relevance signal
+	DefaultVSMWeight  = 0.3 // Similarity refinement
 )
 
 // RankedDocument represents a search result with its score
@@ -28,13 +28,26 @@ func (r RankedDocument) GetScore() float64 {
 
 // RankDocuments uses a min-heap to efficiently find the top N documents
 // by their combined BM25+VSM score. Time complexity: O(n log k) where k is the limit
-func RankDocuments(segment *core.Segment, tokens []string, limit int) []RankedDocument {
+// If rankingCfg is nil or contains invalid values, default weights are used.
+func RankDocuments(segment *core.Segment, tokens []string, limit int, rankingCfg *core.RankingConfig) []RankedDocument {
 	if segment == nil || len(tokens) == 0 {
 		return []RankedDocument{}
 	}
 
 	if limit <= 0 {
 		limit = MaxResults
+	}
+
+	// Use config weights with fallback to defaults if invalid
+	bm25Weight := DefaultBM25Weight
+	vsmWeight := DefaultVSMWeight
+	if rankingCfg != nil {
+		if rankingCfg.BM25Weight > 0 {
+			bm25Weight = rankingCfg.BM25Weight
+		}
+		if rankingCfg.VSMWeight > 0 {
+			vsmWeight = rankingCfg.VSMWeight
+		}
 	}
 
 	// Calculate BM25 scores
@@ -44,7 +57,7 @@ func RankDocuments(segment *core.Segment, tokens []string, limit int) []RankedDo
 	vsmScores := CalculateVSMScores(segment, tokens)
 
 	// Combine scores
-	combinedScores := CombineScores(bm25Scores, vsmScores, BM25Weight, VSMWeight)
+	combinedScores := CombineScores(bm25Scores, vsmScores, bm25Weight, vsmWeight)
 
 	// Build document ID to path map
 	docPaths := make(map[uint]string)
@@ -71,7 +84,8 @@ func RankDocuments(segment *core.Segment, tokens []string, limit int) []RankedDo
 // GetTopDocumentPaths ranks documents and returns only the file paths
 // This is a convenience function for the main search interface
 func GetTopDocumentPaths(segment *core.Segment, tokens []string, limit int) []string {
-	ranked := RankDocuments(segment, tokens, limit)
+	// Use default weights when called without config
+	ranked := RankDocuments(segment, tokens, limit, nil)
 
 	paths := make([]string, len(ranked))
 	for i, doc := range ranked {
