@@ -20,8 +20,34 @@ var (
 	userLog *Logger
 )
 
+// parseLogLevel converts a log level string to zerolog.Level
+// Returns info level as default for empty or invalid values
+func parseLogLevel(level string) zerolog.Level {
+	switch level {
+	case "trace":
+		return zerolog.TraceLevel
+	case "debug":
+		return zerolog.DebugLevel
+	case "info":
+		return zerolog.InfoLevel
+	case "warn", "warning":
+		return zerolog.WarnLevel
+	case "error":
+		return zerolog.ErrorLevel
+	case "fatal":
+		return zerolog.FatalLevel
+	case "panic":
+		return zerolog.PanicLevel
+	case "disabled":
+		return zerolog.Disabled
+	default:
+		// Default to info for empty or invalid values
+		return zerolog.InfoLevel
+	}
+}
+
 // Init initializes the global logger with CLI-optimized settings
-func Init(verbose bool, quiet bool, jsonOutput bool) {
+func Init(verbose bool, quiet bool, jsonOutput bool, logLevel string) {
 	var output io.Writer = os.Stdout
 
 	// Configure console writer for human-readable output
@@ -33,8 +59,10 @@ func Init(verbose bool, quiet bool, jsonOutput bool) {
 		}
 	}
 
-	// Set log level based on flags
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	// Set log level from config, defaulting to info if invalid/empty
+	zerolog.SetGlobalLevel(parseLogLevel(logLevel))
+
+	// CLI flags override config settings
 	if verbose {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
@@ -71,7 +99,7 @@ func Init(verbose bool, quiet bool, jsonOutput bool) {
 func Get() *Logger {
 	if log == nil {
 		// Initialize with default settings if not already initialized
-		Init(false, false, false)
+		Init(false, false, false, "")
 	}
 	return log
 }

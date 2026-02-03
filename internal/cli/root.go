@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"mneme/internal/config"
 	"mneme/internal/constants"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
@@ -17,14 +18,26 @@ var (
 	quiet   bool
 )
 
+// getLogLevelFromConfig attempts to load the config and return the log level.
+// Returns empty string if config cannot be loaded, which will default to "info".
+func getLogLevelFromConfig() string {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		// Config not available yet (possibly not initialized), return empty to default to info
+		return ""
+	}
+	return cfg.Logging.Level
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "mneme",
 	Short: "Mneme - A powerful personal search engine",
 	Long:  `Mneme - a powerful search engine to search for all the personal documents, repos, files`,
 
 	PreRun: func(cmd *cobra.Command, args []string) {
-		// Initialize logger after flags are parsed
-		logger.Init(verbose, quiet, false)
+		// Initialize logger after flags are parsed, with log level from config
+		logLevel := getLogLevelFromConfig()
+		logger.Init(verbose, quiet, false, logLevel)
 	},
 
 	Run: func(cmd *cobra.Command, args []string) {
@@ -58,7 +71,8 @@ var initCmd = &cobra.Command{
 
 func Execute() error {
 	// Initialize logger with flags before executing
-	logger.Init(verbose, quiet, false)
+	// Use empty log level for initial startup, will be properly set in PreRun
+	logger.Init(verbose, quiet, false, "")
 	return rootCmd.Execute()
 }
 

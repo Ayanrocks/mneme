@@ -8,7 +8,7 @@ import (
 // BenchmarkZerolog benchmarks the zerolog logger performance
 func BenchmarkZerolog(b *testing.B) {
 	// Initialize logger with console output
-	Init(false, false, false)
+	Init(false, false, false, "")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -18,7 +18,7 @@ func BenchmarkZerolog(b *testing.B) {
 
 // BenchmarkZerologWithFields benchmarks zerolog with formatted messages
 func BenchmarkZerologWithFields(b *testing.B) {
-	Init(false, false, false)
+	Init(false, false, false, "")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -30,7 +30,7 @@ func BenchmarkZerologWithFields(b *testing.B) {
 func BenchmarkFmtPrintln(b *testing.B) {
 	// Use a buffer to avoid console output
 	var buf bytes.Buffer
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.WriteString("This is a test log message with some data\n")

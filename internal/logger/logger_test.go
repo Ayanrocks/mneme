@@ -16,7 +16,7 @@ func TestInit(t *testing.T) {
 		log = nil
 		userLog = nil
 
-		Init(false, false, false)
+		Init(false, false, false, "")
 
 		require.NotNil(t, log)
 		require.NotNil(t, userLog)
@@ -26,7 +26,7 @@ func TestInit(t *testing.T) {
 		log = nil
 		userLog = nil
 
-		Init(true, false, false)
+		Init(true, false, false, "")
 
 		require.NotNil(t, log)
 		require.NotNil(t, userLog)
@@ -36,7 +36,7 @@ func TestInit(t *testing.T) {
 		log = nil
 		userLog = nil
 
-		Init(false, true, false)
+		Init(false, true, false, "")
 
 		require.NotNil(t, log)
 		require.NotNil(t, userLog)
@@ -46,7 +46,7 @@ func TestInit(t *testing.T) {
 		log = nil
 		userLog = nil
 
-		Init(false, false, true)
+		Init(false, false, true, "")
 
 		require.NotNil(t, log)
 		require.NotNil(t, userLog)
@@ -156,7 +156,7 @@ func TestLoggingLevels(t *testing.T) {
 func TestWith(t *testing.T) {
 	log = nil
 	userLog = nil
-	Init(false, false, false)
+	Init(false, false, false, "")
 
 	t.Run("returns context", func(t *testing.T) {
 		ctx := With()
@@ -167,7 +167,7 @@ func TestWith(t *testing.T) {
 func TestWithField(t *testing.T) {
 	log = nil
 	userLog = nil
-	Init(false, false, false)
+	Init(false, false, false, "")
 
 	t.Run("returns context with field", func(t *testing.T) {
 		ctx := WithField("key", "value")
