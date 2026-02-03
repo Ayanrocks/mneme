@@ -1,6 +1,6 @@
 package version
 
 const (
-	MnemeVersion              = "1.0.0"
-	MnemeStorageEngineVersion = "1.0.0"
+	MnemeVersion              = "0.1.1"
+	MnemeStorageEngineVersion = "0.1.0"
 )

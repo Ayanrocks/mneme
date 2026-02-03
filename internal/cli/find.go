@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"mneme/internal/config"
 	"mneme/internal/display"
 	"mneme/internal/logger"
 	"mneme/internal/query"
@@ -37,6 +38,12 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	config, err := config.LoadConfig()
+	if err != nil {
+		logger.Errorf("Failed to load config: %+v", err)
+		return
+	}
+
 	// get query from args
 	queryString := strings.Join(args, " ")
 
@@ -53,7 +60,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	// Get ranked documents with scores
-	rankedDocs := query.RankDocuments(segmentIndex, queryTokens, query.MaxResults)
+	rankedDocs := query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit)
 
 	if len(rankedDocs) == 0 {
 		logger.PrintError("No documents found for query: %s", queryString)

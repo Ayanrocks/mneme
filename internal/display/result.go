@@ -265,7 +265,7 @@ func PrintResult(result *SearchResult, showScore bool) {
 
 	// Print snippets
 	for _, snippet := range result.Snippets {
-		linePrefix := fmt.Sprintf("  %s: ", lineNumColor(fmt.Sprintf("%d", snippet.LineNumber)))
+		linePrefix := fmt.Sprintf("  %s: ", lineNumColor(fmt.Sprintf("Ln %d", snippet.LineNumber)))
 		fmt.Print(linePrefix)
 
 		// Print content with highlights

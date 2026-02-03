@@ -25,7 +25,7 @@ var DefaultConfig = core.Config{
 	Sources: core.SourcesConfig{
 		Paths:             []string{},
 		IncludeExtensions: []string{},
-		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache"},
+		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache", "target", "build"},
 	},
 	Watcher: core.WatcherConfig{
 		Enabled:    true,
