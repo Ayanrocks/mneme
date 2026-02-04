@@ -28,10 +28,10 @@ var DefaultConfig = core.Config{
 		ExcludeExtensions: []string{},
 		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache", "target", "build"},
 	},
-	Watcher: core.WatcherConfig{
-		Enabled:    true,
-		DebounceMS: 500,
-	},
+	// Watcher: core.WatcherConfig{
+	// 	Enabled:    true,
+	// 	DebounceMS: 500,
+	// },
 	Search: core.SearchConfig{
 		DefaultLimit: 20,
 		UseStopwords: true,
