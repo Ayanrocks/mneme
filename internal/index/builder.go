@@ -14,7 +14,9 @@ const DefaultBatchSize = 1000
 
 // BatchConfig holds configuration for batch indexing
 type BatchConfig struct {
-	BatchSize int // Number of files per batch (default: 1000)
+	BatchSize        int                                      // Number of files per batch (default: 1000)
+	ProgressCallback func(current, total int, message string) // Optional callback for progress updates
+	SuppressLogs     bool                                     // If true, suppress info logs (used when progress bar is active)
 }
 
 // DefaultBatchConfig returns the default batch configuration
@@ -96,7 +98,9 @@ func IndexBuilder(paths []string, crawlerOptions *storage.CrawlerOptions) *core.
 // Each batch is written to disk as a numbered chunk file before processing the next batch.
 // Returns a manifest tracking all created chunks.
 func IndexBuilderBatched(paths []string, crawlerOptions *storage.CrawlerOptions, config *BatchConfig) (*core.Manifest, error) {
-	logger.Info("Starting IndexBuilderBatched")
+	if !config.SuppressLogs {
+		logger.Info("Starting IndexBuilderBatched")
+	}
 
 	if config == nil {
 		config = DefaultBatchConfig()
@@ -113,7 +117,9 @@ func IndexBuilderBatched(paths []string, crawlerOptions *storage.CrawlerOptions,
 		allFiles = append(allFiles, crawlPaths...)
 	}
 
-	logger.Infof("Total files to index: %d (batch size: %d)", len(allFiles), config.BatchSize)
+	if !config.SuppressLogs {
+		logger.Infof("Total files to index: %d (batch size: %d)", len(allFiles), config.BatchSize)
+	}
 
 	if len(allFiles) == 0 {
 		logger.Warn("No files found to index")
@@ -133,7 +139,14 @@ func IndexBuilderBatched(paths []string, crawlerOptions *storage.CrawlerOptions,
 		}
 
 		batchFiles := allFiles[batchStart:batchEnd]
-		logger.Infof("Processing batch %d: files %d-%d", chunkID, batchStart+1, batchEnd)
+		if !config.SuppressLogs {
+			logger.Infof("Processing batch %d: files %d-%d", chunkID, batchStart+1, batchEnd)
+		}
+
+		// Report progress if callback is provided
+		if config.ProgressCallback != nil {
+			config.ProgressCallback(batchEnd, len(allFiles), fmt.Sprintf("Processing batch %d: files %d-%d", chunkID, batchStart+1, batchEnd))
+		}
 
 		// Process this batch
 		chunk, docCount, tokenCount := processBatch(batchFiles, &globalDocID)
@@ -167,12 +180,22 @@ func IndexBuilderBatched(paths []string, crawlerOptions *storage.CrawlerOptions,
 			return manifest, err
 		}
 
-		logger.Infof("Batch %d completed: %d docs, %d unique tokens", chunkID, docCount, tokenCount)
+		if !config.SuppressLogs {
+			logger.Infof("Batch %d completed: %d docs, %d unique tokens", chunkID, docCount, tokenCount)
+		}
+
+		// Report batch completion if callback is provided
+		if config.ProgressCallback != nil {
+			config.ProgressCallback(batchEnd, len(allFiles), fmt.Sprintf("Batch %d completed: %d docs, %d unique tokens", chunkID, docCount, tokenCount))
+		}
+
 		chunkID++
 	}
 
-	logger.Infof("IndexBuilderBatched completed: %d chunks, %d total docs, %d total tokens",
-		len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
+	if !config.SuppressLogs {
+		logger.Infof("IndexBuilderBatched completed: %d chunks, %d total docs, %d total tokens",
+			len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
+	}
 
 	return manifest, nil
 }

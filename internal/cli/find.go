@@ -2,6 +2,7 @@ package cli
 
 import (
 	"mneme/internal/config"
+	"mneme/internal/core"
 	"mneme/internal/display"
 	"mneme/internal/logger"
 	"mneme/internal/query"
@@ -19,8 +20,6 @@ var findCmd = &cobra.Command{
 }
 
 func findCmdExecute(cmd *cobra.Command, args []string) {
-	logger.Info("findCmdExecute")
-
 	initialized, err := IsInitialized()
 	if err != nil {
 		logger.Errorf("Failed to check if initialized: %+v", err)
@@ -31,7 +30,6 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		logger.Error("Mneme is not initialized. Please run 'mneme init' first.")
 		return
 	}
-	logger.Print("args: %+v", args)
 
 	if len(args) < 1 {
 		logger.PrintError("Please provide a query to search for.")
@@ -47,20 +45,42 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	// get query from args
 	queryString := strings.Join(args, " ")
 
-	logger.Info("Query string: " + queryString)
-
 	// Get stemmed tokens for BM25 ranking
 	queryTokens := query.ParseQuery(queryString)
 
-	// Read segments index from the file system
-	segmentIndex, err := storage.LoadSegmentIndex()
-	if err != nil {
-		logger.Errorf("Failed to load segment index: %+v", err)
-		return
-	}
+	// Check if we should show progress bar
+	var segmentIndex *core.Segment
+	var rankedDocs []query.RankedDocument
 
-	// Get ranked documents with scores
-	rankedDocs := query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit, &config.Ranking)
+	if display.ShouldShowProgress() {
+		pb := display.NewProgressBar("Searching", 0)
+		pb.Start()
+		pb.SetMessage("Loading index...")
+
+		// Read segments index from the file system
+		segmentIndex, err = storage.LoadSegmentIndex()
+		if err != nil {
+			pb.Complete()
+			logger.Errorf("Failed to load segment index: %+v", err)
+			return
+		}
+
+		pb.SetMessage("Ranking documents...")
+		// Get ranked documents with scores
+		rankedDocs = query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit, &config.Ranking)
+		pb.Complete()
+	} else {
+		// No progress bar - regular logging
+		// Read segments index from the file system
+		segmentIndex, err = storage.LoadSegmentIndex()
+		if err != nil {
+			logger.Errorf("Failed to load segment index: %+v", err)
+			return
+		}
+
+		// Get ranked documents with scores
+		rankedDocs = query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit, &config.Ranking)
+	}
 
 	if len(rankedDocs) == 0 {
 		logger.PrintError("No documents found for query: %s", queryString)

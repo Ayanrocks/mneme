@@ -3,6 +3,7 @@ package cli
 import (
 	"mneme/internal/config"
 	"mneme/internal/constants"
+	"mneme/internal/display"
 	"mneme/internal/index"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
@@ -19,8 +20,6 @@ var indexCmd = &cobra.Command{
 }
 
 func indexCmdExecute(cmd *cobra.Command, args []string) {
-	logger.Info("indexCmdExecute")
-
 	initialized, err := IsInitialized()
 	if err != nil {
 		logger.Errorf("Failed to check if initialized: %+v", err)
@@ -85,7 +84,6 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	defer storage.ReleaseLock(dataDir)
 
 	// Clear existing segments before re-indexing
-	logger.Info("Clearing existing segments...")
 	err = storage.ClearSegments()
 	if err != nil {
 		logger.Errorf("Failed to clear segments: %+v", err)
@@ -100,22 +98,55 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	// Use batch indexing to reduce memory usage
-	// Default batch size is 1000 files per batch
 	batchConfig := index.DefaultBatchConfig()
 
-	logger.Infof("Starting batch indexing (batch size: %d files)", batchConfig.BatchSize)
+	// Check if we should show progress bar (only when log level is "info")
+	if display.ShouldShowProgress() {
+		// Create progress bar - starts as indeterminate (spinner)
+		pb := display.NewProgressBar("Indexing", 0)
+		pb.Start()
 
-	manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
-	if err != nil {
-		logger.Errorf("Failed to build index: %+v", err)
-		return
+		// Set up progress callback - this will be called by IndexBuilderBatched
+		batchConfig.ProgressCallback = func(current, total int, message string) {
+			pb.SetTotal(total)
+			pb.SetCurrent(current)
+			pb.SetMessage(message)
+		}
+
+		// Suppress regular logging during progress bar by setting NoLogging flag
+		batchConfig.SuppressLogs = true
+
+		manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
+		pb.Complete()
+
+		if err != nil {
+			logger.Errorf("Failed to build index: %+v", err)
+			return
+		}
+
+		if manifest == nil {
+			logger.Warn("No files were indexed")
+			return
+		}
+
+		logger.Print("Indexing completed: %d chunks, %d docs, %d tokens",
+			len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
+	} else {
+		// No progress bar - regular logging mode
+		logger.Infof("Starting batch indexing (batch size: %d files)", batchConfig.BatchSize)
+
+		manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
+		if err != nil {
+			logger.Errorf("Failed to build index: %+v", err)
+			return
+		}
+
+		if manifest == nil {
+			logger.Warn("No files were indexed")
+			return
+		}
+
+		logger.Infof("Indexing completed successfully: %d chunks, %d docs, %d tokens",
+			len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
 	}
-
-	if manifest == nil {
-		logger.Warn("No files were indexed")
-		return
-	}
-
-	logger.Infof("Indexing completed successfully: %d chunks, %d docs, %d tokens",
-		len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
 }
