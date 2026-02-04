@@ -10,6 +10,55 @@ import (
 	"strings"
 )
 
+// BinaryExtensions is a comprehensive list of file extensions for binary/non-readable files
+// that should be skipped during indexing
+var BinaryExtensions = map[string]bool{
+	// Compiled/binary files
+	"exe": true, "dll": true, "so": true, "dylib": true, "o": true, "a": true, "ko": true,
+	"pyc": true, "pyo": true, "class": true, "jar": true, "war": true, "ear": true,
+	"obj": true, "lib": true, "pdb": true, "ilk": true, "exp": true,
+
+	// Archives
+	"zip": true, "tar": true, "gz": true, "bz2": true, "xz": true, "7z": true, "rar": true,
+	"iso": true, "dmg": true, "cab": true, "lz": true, "lzma": true, "lzo": true, "z": true,
+	"tgz": true, "tbz2": true, "txz": true, "tlz": true,
+
+	// Images
+	"jpg": true, "jpeg": true, "png": true, "gif": true, "bmp": true, "ico": true, "svg": true,
+	"webp": true, "tiff": true, "tif": true, "raw": true, "psd": true, "ai": true, "eps": true,
+	"heic": true, "heif": true, "avif": true, "jfif": true, "exr": true, "dds": true,
+	"cr2": true, "nef": true, "orf": true, "sr2": true, "arw": true,
+
+	// Videos
+	"mp4": true, "avi": true, "mkv": true, "mov": true, "wmv": true, "flv": true, "webm": true,
+	"m4v": true, "mpeg": true, "mpg": true, "3gp": true, "3g2": true, "vob": true, "ogv": true,
+	"mxf": true, "mts": true, "m2ts": true, "ts": true, "divx": true, "xvid": true,
+
+	// Audio
+	"mp3": true, "wav": true, "flac": true, "aac": true, "ogg": true, "wma": true, "m4a": true,
+	"aiff": true, "aif": true, "mid": true, "midi": true, "opus": true, "ape": true, "alac": true,
+	"ac3": true, "dts": true, "ra": true, "ram": true,
+
+	// Documents (binary formats)
+	"pdf": true, "doc": true, "docx": true, "xls": true, "xlsx": true, "ppt": true, "pptx": true,
+	"odt": true, "ods": true, "odp": true, "rtf": true, "wpd": true, "pages": true,
+	"numbers": true, "key": true, "epub": true, "mobi": true,
+
+	// Database files
+	"db": true, "sqlite": true, "sqlite3": true, "mdb": true, "accdb": true, "dbf": true,
+	"frm": true, "myd": true, "myi": true, "ibd": true, "ldf": true, "mdf": true, "ndf": true,
+
+	// Fonts
+	"ttf": true, "otf": true, "woff": true, "woff2": true, "eot": true, "fon": true, "fnt": true,
+
+	// Other binary/non-readable files
+	"bin": true, "dat": true, "pak": true, "wasm": true, "node": true, "deb": true, "rpm": true,
+	"msi": true, "pkg": true, "app": true, "apk": true, "ipa": true, "xap": true,
+	"swf": true, "fla": true, "blend": true, "fbx": true, "3ds": true, "max": true,
+	"unity": true, "unitypackage": true, "asset": true, "prefab": true,
+	"lock": true, "DS_Store": true, "localized": true, "map.js": true,
+}
+
 // CrawlerOptions contains configuration for the file crawler
 type CrawlerOptions struct {
 	// IncludeExtensions is a list of file extensions to include (without the leading dot, e.g., "go", "py")
@@ -30,6 +79,10 @@ type CrawlerOptions struct {
 
 	// IncludeHidden determines whether to include hidden files/folders (those starting with .)
 	IncludeHidden bool
+
+	// SkipBinaryFiles determines whether to skip binary and non-readable file types
+	// When true, files with extensions in BinaryExtensions will be skipped
+	SkipBinaryFiles bool
 }
 
 // DefaultCrawlerOptions returns a CrawlerOptions with sensible defaults
@@ -145,6 +198,12 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 				continue
 			}
 
+			// Check if we should skip binary files
+			if options.SkipBinaryFiles && BinaryExtensions[ext] {
+				logger.Debugf("Skipping binary file: %s", entryPath)
+				continue
+			}
+
 			// If includeExtMap is non-empty, only include files with matching extensions
 			// If includeExtMap is empty, include all files
 			if len(includeExtMap) > 0 && !includeExtMap[ext] {
@@ -175,6 +234,11 @@ func shouldSkipFile(filePath string, options CrawlerOptions) bool {
 		if strings.EqualFold(ext, excludeExt) {
 			return true
 		}
+	}
+
+	// Check if we should skip binary files
+	if options.SkipBinaryFiles && BinaryExtensions[ext] {
+		return true
 	}
 
 	// Check extension - if IncludeExtensions is non-empty, only include matching extensions

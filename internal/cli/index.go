@@ -92,9 +92,11 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 
 	crawlerOptions := storage.CrawlerOptions{
 		IncludeExtensions: config.Sources.IncludeExtensions,
+		ExcludeExtensions: config.Sources.ExcludeExtensions,
 		SkipFolders:       config.Sources.Ignore,
 		MaxFilesPerFolder: 0,
 		IncludeHidden:     false,
+		SkipBinaryFiles:   config.Index.SkipBinaryFiles,
 	}
 
 	// Use batch indexing to reduce memory usage

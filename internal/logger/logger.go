@@ -18,6 +18,10 @@ var (
 	log *Logger
 	// User-friendly logger without timestamps
 	userLog *Logger
+	// Track if verbose mode is enabled (allows errors to be shown in info mode)
+	verboseEnabled bool
+	// Track current log level for error suppression logic
+	currentLogLevel zerolog.Level
 )
 
 // parseLogLevel converts a log level string to zerolog.Level
@@ -60,13 +64,19 @@ func Init(verbose bool, quiet bool, jsonOutput bool, logLevel string) {
 	}
 
 	// Set log level from config, defaulting to info if invalid/empty
-	zerolog.SetGlobalLevel(parseLogLevel(logLevel))
+	currentLogLevel = parseLogLevel(logLevel)
+	zerolog.SetGlobalLevel(currentLogLevel)
+
+	// Track verbose mode for error suppression logic
+	verboseEnabled = verbose
 
 	// CLI flags override config settings
 	if verbose {
+		currentLogLevel = zerolog.DebugLevel
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 	if quiet {
+		currentLogLevel = zerolog.ErrorLevel
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	}
 
@@ -134,13 +144,27 @@ func Warnf(format string, args ...interface{}) {
 	Get().Warn().Msgf(format, args...)
 }
 
+// shouldSuppressErrors returns true if errors should be suppressed
+// In info mode, errors are suppressed unless verbose flag is passed
+func shouldSuppressErrors() bool {
+	return currentLogLevel == zerolog.InfoLevel && !verboseEnabled
+}
+
 // Error logs an error message
+// In info mode, errors are suppressed unless verbose flag is passed
 func Error(msg string) {
+	if shouldSuppressErrors() {
+		return
+	}
 	Get().Error().Msg(msg)
 }
 
 // Errorf logs a formatted error message
+// In info mode, errors are suppressed unless verbose flag is passed
 func Errorf(format string, args ...interface{}) {
+	if shouldSuppressErrors() {
+		return
+	}
 	Get().Error().Msgf(format, args...)
 }
 
