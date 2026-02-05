@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"mneme/internal/core"
 	"os"
 	"path/filepath"
 	"testing"
@@ -139,7 +140,7 @@ func TestBuildFolderMap(t *testing.T) {
 }
 
 func TestDefaultCrawlerOptions(t *testing.T) {
-	opts := DefaultCrawlerOptions()
+	opts := core.DefaultCrawlerOptions()
 
 	t.Run("has default skip folders", func(t *testing.T) {
 		expectedFolders := []string{".git", "node_modules", ".svn", ".hg", "__pycache__"}
@@ -186,55 +187,55 @@ func TestShouldSkipFile(t *testing.T) {
 	tests := []struct {
 		name     string
 		filePath string
-		options  CrawlerOptions
+		options  core.CrawlerOptions
 		expected bool
 	}{
 		{
 			name:     "skip hidden file",
 			filePath: "/path/.hidden",
-			options:  CrawlerOptions{IncludeHidden: false},
+			options:  core.CrawlerOptions{IncludeHidden: false},
 			expected: true,
 		},
 		{
 			name:     "include hidden file when enabled",
 			filePath: "/path/.hidden",
-			options:  CrawlerOptions{IncludeHidden: true},
+			options:  core.CrawlerOptions{IncludeHidden: true},
 			expected: false,
 		},
 		{
 			name:     "skip excluded extension",
 			filePath: "/path/file.log",
-			options:  CrawlerOptions{ExcludeExtensions: []string{"log", "tmp"}},
+			options:  core.CrawlerOptions{ExcludeExtensions: []string{"log", "tmp"}},
 			expected: true,
 		},
 		{
 			name:     "skip binary file when enabled",
 			filePath: "/path/file.exe",
-			options:  CrawlerOptions{SkipBinaryFiles: true},
+			options:  core.CrawlerOptions{SkipBinaryFiles: true},
 			expected: true,
 		},
 		{
 			name:     "include binary file when disabled",
 			filePath: "/path/file.exe",
-			options:  CrawlerOptions{SkipBinaryFiles: false},
+			options:  core.CrawlerOptions{SkipBinaryFiles: false},
 			expected: false,
 		},
 		{
 			name:     "skip if not in include list",
 			filePath: "/path/file.py",
-			options:  CrawlerOptions{IncludeExtensions: []string{"go", "js"}},
+			options:  core.CrawlerOptions{IncludeExtensions: []string{"go", "js"}},
 			expected: true,
 		},
 		{
 			name:     "include if in include list",
 			filePath: "/path/file.go",
-			options:  CrawlerOptions{IncludeExtensions: []string{"go", "js"}},
+			options:  core.CrawlerOptions{IncludeExtensions: []string{"go", "js"}},
 			expected: false,
 		},
 		{
 			name:     "include all when include list empty",
 			filePath: "/path/file.xyz",
-			options:  CrawlerOptions{IncludeExtensions: []string{}},
+			options:  core.CrawlerOptions{IncludeExtensions: []string{}},
 			expected: false,
 		},
 	}
@@ -308,7 +309,7 @@ func TestCrawler_SingleFile(t *testing.T) {
 	}
 
 	t.Run("returns single file path", func(t *testing.T) {
-		opts := DefaultCrawlerOptions()
+		opts := core.DefaultCrawlerOptions()
 		result, err := Crawler(testFile, opts)
 		if err != nil {
 			t.Fatalf("Crawler error: %v", err)
@@ -322,7 +323,7 @@ func TestCrawler_SingleFile(t *testing.T) {
 	})
 
 	t.Run("respects extension filter for single file", func(t *testing.T) {
-		opts := CrawlerOptions{IncludeExtensions: []string{"py"}}
+		opts := core.CrawlerOptions{IncludeExtensions: []string{"py"}}
 		result, err := Crawler(testFile, opts)
 		if err != nil {
 			t.Fatalf("Crawler error: %v", err)
@@ -363,7 +364,7 @@ func TestCrawler_Directory(t *testing.T) {
 	}
 
 	t.Run("crawls all files", func(t *testing.T) {
-		opts := DefaultCrawlerOptions()
+		opts := core.DefaultCrawlerOptions()
 		result, err := Crawler(tmpDir, opts)
 		if err != nil {
 			t.Fatalf("Crawler error: %v", err)
@@ -375,7 +376,7 @@ func TestCrawler_Directory(t *testing.T) {
 	})
 
 	t.Run("filters by extension", func(t *testing.T) {
-		opts := CrawlerOptions{IncludeExtensions: []string{"go"}}
+		opts := core.CrawlerOptions{IncludeExtensions: []string{"go"}}
 		result, err := Crawler(tmpDir, opts)
 		if err != nil {
 			t.Fatalf("Crawler error: %v", err)
@@ -387,7 +388,7 @@ func TestCrawler_Directory(t *testing.T) {
 	})
 
 	t.Run("excludes extensions", func(t *testing.T) {
-		opts := CrawlerOptions{ExcludeExtensions: []string{"md", "json"}}
+		opts := core.CrawlerOptions{ExcludeExtensions: []string{"md", "json"}}
 		result, err := Crawler(tmpDir, opts)
 		if err != nil {
 			t.Fatalf("Crawler error: %v", err)
@@ -430,7 +431,7 @@ func TestCrawler_SkipFolders(t *testing.T) {
 		t.Fatalf("Failed to create main.go: %v", err)
 	}
 
-	opts := DefaultCrawlerOptions()
+	opts := core.DefaultCrawlerOptions()
 	result, err := Crawler(tmpDir, opts)
 	if err != nil {
 		t.Fatalf("Crawler error: %v", err)
@@ -443,7 +444,7 @@ func TestCrawler_SkipFolders(t *testing.T) {
 }
 
 func TestCrawler_NonExistentPath(t *testing.T) {
-	opts := DefaultCrawlerOptions()
+	opts := core.DefaultCrawlerOptions()
 	_, err := Crawler("/nonexistent/path/that/does/not/exist", opts)
 	if err == nil {
 		t.Error("Expected error for non-existent path")

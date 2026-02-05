@@ -3,6 +3,7 @@ package cli
 import (
 	"mneme/internal/config"
 	"mneme/internal/constants"
+	"mneme/internal/core"
 	"mneme/internal/display"
 	"mneme/internal/index"
 	"mneme/internal/logger"
@@ -90,7 +91,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	crawlerOptions := storage.CrawlerOptions{
+	crawlerOptions := core.CrawlerOptions{
 		IncludeExtensions: config.Sources.IncludeExtensions,
 		ExcludeExtensions: config.Sources.ExcludeExtensions,
 		SkipFolders:       config.Sources.Ignore,
@@ -100,7 +101,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	// Use batch indexing to reduce memory usage
-	batchConfig := index.DefaultBatchConfig()
+	batchConfig := core.DefaultBatchConfig()
 
 	// Check if we should show progress bar (only when log level is "info")
 	if display.ShouldShowProgress() {

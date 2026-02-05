@@ -9,24 +9,8 @@ import (
 	"time"
 )
 
-// DefaultBatchSize is the default number of files to process per batch
-const DefaultBatchSize = 1000
-
-// BatchConfig holds configuration for batch indexing
-type BatchConfig struct {
-	BatchSize        int                                      // Number of files per batch (default: 1000)
-	ProgressCallback func(current, total int, message string) // Optional callback for progress updates
-	SuppressLogs     bool                                     // If true, suppress info logs (used when progress bar is active)
-}
-
-// DefaultBatchConfig returns the default batch configuration
-func DefaultBatchConfig() *BatchConfig {
-	return &BatchConfig{
-		BatchSize: DefaultBatchSize,
-	}
-}
-
-func IndexBuilder(paths []string, crawlerOptions *storage.CrawlerOptions) *core.Segment {
+// DEPRECATED: Use IndexBuilderBatched instead
+func IndexBuilder(paths []string, crawlerOptions *core.CrawlerOptions) *core.Segment {
 	logger.Info("Starting IndexBuilder")
 
 	// Token frequency map: token -> frequency count
@@ -97,13 +81,13 @@ func IndexBuilder(paths []string, crawlerOptions *storage.CrawlerOptions) *core.
 // IndexBuilderBatched processes files in batches to reduce memory usage.
 // Each batch is written to disk as a numbered chunk file before processing the next batch.
 // Returns a manifest tracking all created chunks.
-func IndexBuilderBatched(paths []string, crawlerOptions *storage.CrawlerOptions, config *BatchConfig) (*core.Manifest, error) {
+func IndexBuilderBatched(paths []string, crawlerOptions *core.CrawlerOptions, config *core.BatchConfig) (*core.Manifest, error) {
 	if !config.SuppressLogs {
 		logger.Info("Starting IndexBuilderBatched")
 	}
 
 	if config == nil {
-		config = DefaultBatchConfig()
+		config = core.DefaultBatchConfig()
 	}
 
 	// First, collect all file paths from all sources

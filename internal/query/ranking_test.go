@@ -171,7 +171,7 @@ func TestGetTopDocumentPaths(t *testing.T) {
 }
 
 func TestRankedDocument_GetScore(t *testing.T) {
-	doc := RankedDocument{
+	doc := core.RankedDocument{
 		DocID: 1,
 		Path:  "/test/path",
 		Score: 0.85,

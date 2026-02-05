@@ -50,7 +50,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 
 	// Check if we should show progress bar
 	var segmentIndex *core.Segment
-	var rankedDocs []query.RankedDocument
+	var rankedDocs []core.RankedDocument
 
 	if display.ShouldShowProgress() {
 		pb := display.NewProgressBar("Searching", 0)
@@ -91,7 +91,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	originalQueryWords := strings.Fields(queryString)
 
 	// Build search results with snippets - only include results with actual matches
-	var results []*display.SearchResult
+	var results []*core.SearchResult
 	for _, doc := range rankedDocs {
 		result, err := display.FormatSearchResult(doc.Path, originalQueryWords, doc.Score)
 		if err != nil {

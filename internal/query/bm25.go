@@ -16,13 +16,6 @@ const (
 	b = 0.75
 )
 
-// DocumentScore holds a document with its relevance score
-type DocumentScore struct {
-	DocID uint
-	Path  string
-	Score float64
-}
-
 // calculateIDF calculates the Inverse Document Frequency for a term
 // Formula: ln((N - df + 0.5) / (df + 0.5) + 1)
 // Where N is total documents, df is document frequency (docs containing term)

@@ -5,15 +5,9 @@ import (
 	"mneme/internal/core"
 )
 
-// TFIDFVector represents a document or query as a TF-IDF weighted vector
-type TFIDFVector struct {
-	Weights map[string]float64
-	Norm    float64 // L2 norm for cosine similarity
-}
-
 // BuildQueryTFIDFVector creates a TF-IDF vector for the query terms
-func BuildQueryTFIDFVector(segment *core.Segment, tokens []string) *TFIDFVector {
-	vector := &TFIDFVector{
+func BuildQueryTFIDFVector(segment *core.Segment, tokens []string) *core.TFIDFVector {
+	vector := &core.TFIDFVector{
 		Weights: make(map[string]float64),
 	}
 
@@ -60,8 +54,8 @@ func BuildQueryTFIDFVector(segment *core.Segment, tokens []string) *TFIDFVector 
 
 // BuildDocumentTFIDFVector creates a TF-IDF vector for a document
 // Only considers the query terms for efficiency
-func BuildDocumentTFIDFVector(segment *core.Segment, docID uint, queryTokens []string) *TFIDFVector {
-	vector := &TFIDFVector{
+func BuildDocumentTFIDFVector(segment *core.Segment, docID uint, queryTokens []string) *core.TFIDFVector {
+	vector := &core.TFIDFVector{
 		Weights: make(map[string]float64),
 	}
 
@@ -106,7 +100,7 @@ func BuildDocumentTFIDFVector(segment *core.Segment, docID uint, queryTokens []s
 
 // CalculateCosineSimilarity computes the cosine similarity between two TF-IDF vectors
 // Returns a value between 0 (no similarity) and 1 (identical)
-func CalculateCosineSimilarity(vec1, vec2 *TFIDFVector) float64 {
+func CalculateCosineSimilarity(vec1, vec2 *core.TFIDFVector) float64 {
 	if vec1 == nil || vec2 == nil || vec1.Norm == 0 || vec2.Norm == 0 {
 		return 0
 	}

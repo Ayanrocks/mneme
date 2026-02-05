@@ -6,32 +6,12 @@ import (
 	"strings"
 	"unicode"
 
+	"mneme/internal/core"
 	"mneme/internal/index"
 	"mneme/internal/storage"
 
 	"github.com/fatih/color"
 )
-
-// SearchResult represents a formatted search result with snippet
-type SearchResult struct {
-	DocPath    string
-	Score      float64
-	Snippets   []Snippet
-	MatchCount int
-}
-
-// Snippet represents a preview of the matched content
-type Snippet struct {
-	LineNumber int
-	Content    string
-	Highlights []HighlightRange
-}
-
-// HighlightRange marks the start and end positions of a match within a snippet
-type HighlightRange struct {
-	Start int
-	End   int
-}
 
 const (
 	// SnippetContextChars defines how many characters to show before/after the match
@@ -52,16 +32,16 @@ var (
 
 // FormatSearchResult takes a document path and query tokens, reads the file,
 // and returns a formatted SearchResult with snippets
-func FormatSearchResult(docPath string, queryTokens []string, score float64) (*SearchResult, error) {
+func FormatSearchResult(docPath string, queryTokens []string, score float64) (*core.SearchResult, error) {
 	lines, err := storage.ReadFileContents(docPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", docPath, err)
 	}
 
-	result := &SearchResult{
+	result := &core.SearchResult{
 		DocPath:  docPath,
 		Score:    score,
-		Snippets: []Snippet{},
+		Snippets: []core.Snippet{},
 	}
 
 	// Find matching lines
@@ -82,8 +62,8 @@ func FormatSearchResult(docPath string, queryTokens []string, score float64) (*S
 }
 
 // findMatchesInLine finds all positions where query tokens match in a line
-func findMatchesInLine(line string, queryTokens []string) []HighlightRange {
-	var matches []HighlightRange
+func findMatchesInLine(line string, queryTokens []string) []core.HighlightRange {
+	var matches []core.HighlightRange
 	lineLower := strings.ToLower(line)
 
 	for _, token := range queryTokens {
@@ -103,7 +83,7 @@ func findMatchesInLine(line string, queryTokens []string) []HighlightRange {
 			actualStart := startPos + idx
 			actualEnd := actualStart + len(token)
 
-			matches = append(matches, HighlightRange{
+			matches = append(matches, core.HighlightRange{
 				Start: actualStart,
 				End:   actualEnd,
 			})
@@ -142,7 +122,7 @@ func isWordBoundary(line string, start, end int) bool {
 }
 
 // mergeRanges merges overlapping highlight ranges
-func mergeRanges(ranges []HighlightRange) []HighlightRange {
+func mergeRanges(ranges []core.HighlightRange) []core.HighlightRange {
 	if len(ranges) <= 1 {
 		return ranges
 	}
@@ -156,7 +136,7 @@ func mergeRanges(ranges []HighlightRange) []HighlightRange {
 		}
 	}
 
-	merged := []HighlightRange{ranges[0]}
+	merged := []core.HighlightRange{ranges[0]}
 	for i := 1; i < len(ranges); i++ {
 		last := &merged[len(merged)-1]
 		if ranges[i].Start <= last.End {
@@ -172,18 +152,18 @@ func mergeRanges(ranges []HighlightRange) []HighlightRange {
 }
 
 // createSnippet creates a snippet with the matched content
-func createSnippet(lineNum int, line string, matches []HighlightRange) Snippet {
+func createSnippet(lineNum int, line string, matches []core.HighlightRange) core.Snippet {
 	// Trim leading whitespace and track how much was removed
 	trimmedLine := strings.TrimLeft(line, " \t")
 	leadingTrimmed := len(line) - len(trimmedLine)
 
 	// Adjust match positions for leading trim
-	adjustedMatches := make([]HighlightRange, 0, len(matches))
+	adjustedMatches := make([]core.HighlightRange, 0, len(matches))
 	for _, m := range matches {
 		newStart := m.Start - leadingTrimmed
 		newEnd := m.End - leadingTrimmed
 		if newStart >= 0 && newEnd <= len(trimmedLine) {
-			adjustedMatches = append(adjustedMatches, HighlightRange{
+			adjustedMatches = append(adjustedMatches, core.HighlightRange{
 				Start: newStart,
 				End:   newEnd,
 			})
@@ -234,10 +214,10 @@ func createSnippet(lineNum int, line string, matches []HighlightRange) Snippet {
 		content = prefix + snippetContent + suffix
 
 		// Adjust highlight positions for the new content
-		newHighlights := []HighlightRange{}
+		newHighlights := []core.HighlightRange{}
 		for _, m := range highlights {
 			if m.Start >= start && m.End <= end {
-				newHighlights = append(newHighlights, HighlightRange{
+				newHighlights = append(newHighlights, core.HighlightRange{
 					Start: m.Start - start + len(prefix),
 					End:   m.End - start + len(prefix),
 				})
@@ -246,7 +226,7 @@ func createSnippet(lineNum int, line string, matches []HighlightRange) Snippet {
 		highlights = newHighlights
 	}
 
-	return Snippet{
+	return core.Snippet{
 		LineNumber: lineNum,
 		Content:    content,
 		Highlights: highlights,
@@ -254,7 +234,7 @@ func createSnippet(lineNum int, line string, matches []HighlightRange) Snippet {
 }
 
 // PrintResult prints a formatted search result to stdout
-func PrintResult(result *SearchResult, showScore bool) {
+func PrintResult(result *core.SearchResult, showScore bool) {
 	// Print document path
 	fmt.Printf("%s\n", pathColor(result.DocPath))
 
@@ -278,7 +258,7 @@ func PrintResult(result *SearchResult, showScore bool) {
 }
 
 // printHighlightedContent prints the content with highlighted matches
-func printHighlightedContent(content string, highlights []HighlightRange) {
+func printHighlightedContent(content string, highlights []core.HighlightRange) {
 	lastEnd := 0
 
 	for _, h := range highlights {
@@ -307,7 +287,7 @@ func printHighlightedContent(content string, highlights []HighlightRange) {
 }
 
 // PrintResults prints multiple search results
-func PrintResults(results []*SearchResult, showScore bool, query string) {
+func PrintResults(results []*core.SearchResult, showScore bool, query string) {
 	if len(results) == 0 {
 		fmt.Printf("No results found for: %s\n", query)
 		return
@@ -356,7 +336,7 @@ func truncateSnippet(content string, maxLen int) string {
 }
 
 // CreateSearchResultFromTokens creates a SearchResult by re-tokenizing the query for matching
-func CreateSearchResultFromTokens(docPath string, originalQuery string, score float64) (*SearchResult, error) {
+func CreateSearchResultFromTokens(docPath string, originalQuery string, score float64) (*core.SearchResult, error) {
 	// Tokenize the original query to get search terms
 	queryTokens := index.TokenizeQuery(originalQuery)
 	return FormatSearchResult(docPath, queryTokens, score)

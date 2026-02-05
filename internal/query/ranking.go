@@ -14,24 +14,12 @@ const (
 	DefaultVSMWeight  = 0.3 // Similarity refinement
 )
 
-// RankedDocument represents a search result with its score
-type RankedDocument struct {
-	DocID uint
-	Path  string
-	Score float64
-}
-
-// GetScore implements utils.Scored interface
-func (r RankedDocument) GetScore() float64 {
-	return r.Score
-}
-
 // RankDocuments uses a min-heap to efficiently find the top N documents
 // by their combined BM25+VSM score. Time complexity: O(n log k) where k is the limit
 // If rankingCfg is nil or contains invalid values, default weights are used.
-func RankDocuments(segment *core.Segment, tokens []string, limit int, rankingCfg *core.RankingConfig) []RankedDocument {
+func RankDocuments(segment *core.Segment, tokens []string, limit int, rankingCfg *core.RankingConfig) []core.RankedDocument {
 	if segment == nil || len(tokens) == 0 {
-		return []RankedDocument{}
+		return []core.RankedDocument{}
 	}
 
 	if limit <= 0 {
@@ -66,10 +54,10 @@ func RankDocuments(segment *core.Segment, tokens []string, limit int, rankingCfg
 	}
 
 	// Build candidate documents with positive scores
-	candidates := make([]RankedDocument, 0, len(combinedScores))
+	candidates := make([]core.RankedDocument, 0, len(combinedScores))
 	for docID, score := range combinedScores {
 		if score > 0 {
-			candidates = append(candidates, RankedDocument{
+			candidates = append(candidates, core.RankedDocument{
 				DocID: docID,
 				Path:  docPaths[docID],
 				Score: score,

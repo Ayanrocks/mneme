@@ -1,5 +1,7 @@
 package core
 
+import "mneme/internal/constants"
+
 type Config struct {
 	Version uint8         `toml:"version"`
 	Index   IndexConfig   `toml:"index"`
@@ -44,4 +46,18 @@ type RankingConfig struct {
 type LoggingConfig struct {
 	Level string `toml:"level"`
 	JSON  bool   `toml:"json"`
+}
+
+// BatchConfig holds configuration for batch indexing
+type BatchConfig struct {
+	BatchSize        int                                      // Number of files per batch (default: 1000)
+	ProgressCallback func(current, total int, message string) // Optional callback for progress updates
+	SuppressLogs     bool                                     // If true, suppress info logs (used when progress bar is active)
+}
+
+// DefaultBatchConfig returns the default batch configuration
+func DefaultBatchConfig() *BatchConfig {
+	return &BatchConfig{
+		BatchSize: constants.DefaultBatchSize,
+	}
 }

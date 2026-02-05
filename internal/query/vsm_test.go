@@ -123,7 +123,7 @@ func TestCalculateCosineSimilarity(t *testing.T) {
 			t.Errorf("Expected 0, got %v", result)
 		}
 
-		vec := &TFIDFVector{Weights: map[string]float64{"a": 1}, Norm: 1}
+		vec := &core.TFIDFVector{Weights: map[string]float64{"a": 1}, Norm: 1}
 		result = CalculateCosineSimilarity(nil, vec)
 		if result != 0 {
 			t.Errorf("Expected 0, got %v", result)
@@ -136,8 +136,8 @@ func TestCalculateCosineSimilarity(t *testing.T) {
 	})
 
 	t.Run("zero norm vectors return 0", func(t *testing.T) {
-		vec1 := &TFIDFVector{Weights: map[string]float64{"a": 1}, Norm: 0}
-		vec2 := &TFIDFVector{Weights: map[string]float64{"a": 1}, Norm: 1}
+		vec1 := &core.TFIDFVector{Weights: map[string]float64{"a": 1}, Norm: 0}
+		vec2 := &core.TFIDFVector{Weights: map[string]float64{"a": 1}, Norm: 1}
 		result := CalculateCosineSimilarity(vec1, vec2)
 		if result != 0 {
 			t.Errorf("Expected 0, got %v", result)
@@ -145,7 +145,7 @@ func TestCalculateCosineSimilarity(t *testing.T) {
 	})
 
 	t.Run("identical vectors return 1", func(t *testing.T) {
-		vec := &TFIDFVector{
+		vec := &core.TFIDFVector{
 			Weights: map[string]float64{"a": 1, "b": 2},
 			Norm:    math.Sqrt(5), // sqrt(1^2 + 2^2)
 		}
@@ -156,11 +156,11 @@ func TestCalculateCosineSimilarity(t *testing.T) {
 	})
 
 	t.Run("orthogonal vectors return 0", func(t *testing.T) {
-		vec1 := &TFIDFVector{
+		vec1 := &core.TFIDFVector{
 			Weights: map[string]float64{"a": 1},
 			Norm:    1,
 		}
-		vec2 := &TFIDFVector{
+		vec2 := &core.TFIDFVector{
 			Weights: map[string]float64{"b": 1},
 			Norm:    1,
 		}
@@ -171,11 +171,11 @@ func TestCalculateCosineSimilarity(t *testing.T) {
 	})
 
 	t.Run("partial overlap", func(t *testing.T) {
-		vec1 := &TFIDFVector{
+		vec1 := &core.TFIDFVector{
 			Weights: map[string]float64{"a": 1, "b": 1},
 			Norm:    math.Sqrt(2),
 		}
-		vec2 := &TFIDFVector{
+		vec2 := &core.TFIDFVector{
 			Weights: map[string]float64{"a": 1, "c": 1},
 			Norm:    math.Sqrt(2),
 		}
