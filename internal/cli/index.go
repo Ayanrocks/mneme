@@ -84,10 +84,10 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	// defer the release of the lock
 	defer storage.ReleaseLock(dataDir)
 
-	// Clear existing segments before re-indexing
-	err = storage.ClearSegments()
+	// Move existing segments to tombstones before re-indexing
+	err = storage.MoveSegmentsToTombstones()
 	if err != nil {
-		logger.Errorf("Failed to clear segments: %+v", err)
+		logger.Errorf("Failed to move segments to tombstones: %+v", err)
 		return
 	}
 
@@ -134,6 +134,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 
 		logger.Print("Indexing completed: %d chunks, %d docs, %d tokens",
 			len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
+		CheckTombstonesAndHint()
 	} else {
 		// No progress bar - regular logging mode
 		logger.Infof("Starting batch indexing (batch size: %d files)", batchConfig.BatchSize)
@@ -151,5 +152,6 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 
 		logger.Infof("Indexing completed successfully: %d chunks, %d docs, %d tokens",
 			len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
+		CheckTombstonesAndHint()
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -767,42 +768,170 @@ func LoadAllChunks() (*core.Segment, error) {
 	return mergedSegment, nil
 }
 
-// ClearSegments removes all chunk files and manifest from the segments directory
-func ClearSegments() error {
-	logger.Info("Clearing segments directory...")
+// MoveSegmentsToTombstones moves all segment files to the tombstones directory
+// instead of deleting them. Files are prefixed with a timestamp to prevent naming conflicts.
+func MoveSegmentsToTombstones() error {
+	logger.Info("Moving segments to tombstones...")
 
 	segmentsPath := filepath.Join(constants.DirPath, "segments")
-	expandedPath, err := utils.ExpandFilePath(segmentsPath)
+	expandedSegmentsPath, err := utils.ExpandFilePath(segmentsPath)
 	if err != nil {
 		logger.Errorf("Error expanding segments path: %+v", err)
 		return fmt.Errorf("failed to expand segments path: %w", err)
 	}
 
-	// Read directory contents
-	entries, err := os.ReadDir(expandedPath)
+	tombstonesPath := filepath.Join(constants.DirPath, "tombstones")
+	expandedTombstonesPath, err := utils.ExpandFilePath(tombstonesPath)
+	if err != nil {
+		logger.Errorf("Error expanding tombstones path: %+v", err)
+		return fmt.Errorf("failed to expand tombstones path: %w", err)
+	}
+
+	// Ensure tombstones directory exists
+	if err := os.MkdirAll(expandedTombstonesPath, os.ModePerm); err != nil {
+		logger.Errorf("Error creating tombstones directory: %+v", err)
+		return fmt.Errorf("failed to create tombstones directory: %w", err)
+	}
+
+	// Read segments directory contents
+	entries, err := os.ReadDir(expandedSegmentsPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logger.Debug("Segments directory does not exist, nothing to clear")
+			logger.Debug("Segments directory does not exist, nothing to move")
 			return nil
 		}
 		logger.Errorf("Error reading segments directory: %+v", err)
 		return fmt.Errorf("failed to read segments directory: %w", err)
 	}
 
-	// Remove all files in the directory
+	// Generate timestamp prefix for this batch
+	timestamp := time.Now().Format("2006-01-02T15-04-05")
+	movedCount := 0
+
+	// Move all files to tombstones
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue // Skip subdirectories
 		}
+
+		srcPath := filepath.Join(expandedSegmentsPath, entry.Name())
+		// Add timestamp prefix to prevent naming conflicts
+		destPath := filepath.Join(expandedTombstonesPath, fmt.Sprintf("%s_%s", timestamp, entry.Name()))
+
+		err = os.Rename(srcPath, destPath)
+		if err != nil {
+			logger.Errorf("Error moving file %s to tombstones: %+v", entry.Name(), err)
+			return fmt.Errorf("failed to move file %s: %w", entry.Name(), err)
+		}
+		logger.Debugf("Moved to tombstones: %s -> %s", entry.Name(), filepath.Base(destPath))
+		movedCount++
+	}
+
+	logger.Infof("Moved %d files to tombstones", movedCount)
+	return nil
+}
+
+// GetTombstonesSize calculates the total size of files in the tombstones directory
+func GetTombstonesSize() (int64, error) {
+	tombstonesPath := filepath.Join(constants.DirPath, "tombstones")
+	expandedPath, err := utils.ExpandFilePath(tombstonesPath)
+	if err != nil {
+		logger.Errorf("Error expanding tombstones path: %+v", err)
+		return 0, fmt.Errorf("failed to expand tombstones path: %w", err)
+	}
+
+	var totalSize int64
+
+	entries, err := os.ReadDir(expandedPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, nil // Tombstones directory doesn't exist, size is 0
+		}
+		logger.Errorf("Error reading tombstones directory: %+v", err)
+		return 0, fmt.Errorf("failed to read tombstones directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			logger.Warnf("Error getting info for %s: %+v", entry.Name(), err)
+			continue
+		}
+		totalSize += info.Size()
+	}
+
+	return totalSize, nil
+}
+
+// ClearTombstones permanently deletes all files in the tombstones directory
+func ClearTombstones() (int64, int, error) {
+	logger.Info("Clearing tombstones directory...")
+
+	tombstonesPath := filepath.Join(constants.DirPath, "tombstones")
+	expandedPath, err := utils.ExpandFilePath(tombstonesPath)
+	if err != nil {
+		logger.Errorf("Error expanding tombstones path: %+v", err)
+		return 0, 0, fmt.Errorf("failed to expand tombstones path: %w", err)
+	}
+
+	entries, err := os.ReadDir(expandedPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			logger.Debug("Tombstones directory does not exist, nothing to clear")
+			return 0, 0, nil
+		}
+		logger.Errorf("Error reading tombstones directory: %+v", err)
+		return 0, 0, fmt.Errorf("failed to read tombstones directory: %w", err)
+	}
+
+	var freedBytes int64
+	deletedCount := 0
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
 		filePath := filepath.Join(expandedPath, entry.Name())
+
+		// Get file size before deleting
+		info, err := entry.Info()
+		if err == nil {
+			freedBytes += info.Size()
+		}
+
 		err = os.Remove(filePath)
 		if err != nil {
 			logger.Errorf("Error removing file %s: %+v", filePath, err)
-			return fmt.Errorf("failed to remove file %s: %w", entry.Name(), err)
+			return freedBytes, deletedCount, fmt.Errorf("failed to remove file %s: %w", entry.Name(), err)
 		}
-		logger.Debugf("Removed: %s", entry.Name())
+		deletedCount++
+		logger.Debugf("Deleted: %s", entry.Name())
 	}
 
-	logger.Info("Segments directory cleared successfully")
-	return nil
+	logger.Infof("Tombstones cleared: %d files, %d bytes freed", deletedCount, freedBytes)
+	return freedBytes, deletedCount, nil
+}
+
+// FormatBytes formats bytes into a human-readable string (KB, MB, GB)
+func FormatBytes(bytes int64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+		GB = MB * 1024
+	)
+
+	switch {
+	case bytes >= GB:
+		return fmt.Sprintf("%.2f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.2f MB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.2f KB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d bytes", bytes)
+	}
 }
