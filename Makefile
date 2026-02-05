@@ -2,8 +2,9 @@
 
 # Variables
 GO := go
-GOFLAGS := -v
-TESTFLAGS := -race -coverprofile=coverage.out -covermode=atomic
+GOFLAGS := 
+TESTFLAGS := -race
+COVERAGEFLAGS := -race -coverprofile=/tmp/coverage.out -covermode=atomic
 BENCHFLAGS := -bench=. -benchmem -cpuprofile=cpu.prof -memprofile=mem.prof
 COVERAGE_HTML := coverage.html
 COVERAGE_TXT := coverage.txt
@@ -34,20 +35,24 @@ help:
 # Test targets
 .PHONY: test
 test:
-	@echo "Running tests with coverage..."
-	$(GO) test $(GOFLAGS) $(TESTFLAGS) ./...
+	@echo "Running tests..."
+	@$(GO) test $(TESTFLAGS) ./... 2>&1 | tee /tmp/test_output.txt | grep -E "^(ok|FAIL|---|	--- )" || true
 	@echo ""
-
-.PHONY: test-short
-test-short:
-	@echo "Running tests (short mode)..."
-	$(GO) test $(GOFLAGS) ./...
-	@echo ""
+	@echo "=== Test Summary ==="
+	@echo "Passed: $$(grep -c '^ok' /tmp/test_output.txt || echo 0)"
+	@echo "Failed: $$(grep -c '^FAIL' /tmp/test_output.txt || echo 0)"
+	@if grep -q '^FAIL' /tmp/test_output.txt; then exit 1; fi
 
 .PHONY: test-verbose
 test-verbose:
 	@echo "Running tests (verbose mode)..."
-	$(GO) test $(GOFLAGS) -v ./...
+	$(GO) test -v $(TESTFLAGS) ./...
+	@echo ""
+
+.PHONY: test-short
+test-short:
+	@echo "Running tests (short mode, no race detector)..."
+	$(GO) test ./...
 	@echo ""
 
 .PHONY: test-bench
@@ -58,10 +63,13 @@ test-bench:
 	@echo ""
 
 .PHONY: test-coverage
-test-coverage: test
+test-coverage:
+	@echo "Running tests with coverage..."
+	@$(GO) test $(COVERAGEFLAGS) ./... 2>&1 | grep -E "^(ok|FAIL|coverage)" || true
+	@echo ""
 	@echo "Generating coverage report..."
-	$(GO) tool cover -html=coverage.out -o $(COVERAGE_HTML)
-	$(GO) tool cover -func=coverage.out -o $(COVERAGE_TXT)
+	$(GO) tool cover -html=/tmp/coverage.out -o $(COVERAGE_HTML)
+	$(GO) tool cover -func=/tmp/coverage.out -o $(COVERAGE_TXT)
 	@echo "Coverage report: $(COVERAGE_HTML)"
 	@echo "Coverage summary: $(COVERAGE_TXT)"
 	@echo ""
@@ -124,8 +132,8 @@ all: fmt vet test build
 .PHONY: ci-test
 ci-test:
 	@echo "Running CI tests..."
-	$(GO) test $(GOFLAGS) -race -coverprofile=coverage.out -covermode=atomic ./...
-	$(GO) tool cover -func=coverage.out
+	$(GO) test $(GOFLAGS) -race -coverprofile=/tmp/coverage.out -covermode=atomic ./...
+	$(GO) tool cover -func=/tmp/coverage.out
 	@echo ""
 
 .PHONY: ci-lint

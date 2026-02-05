@@ -88,6 +88,9 @@ func TestLoggingLevels(t *testing.T) {
 		Logger: zerolog.New(consoleWriter).With().Logger(),
 	}
 
+	// Enable verbose mode to prevent Error suppression in info mode
+	verboseEnabled = true
+
 	t.Run("Debug", func(t *testing.T) {
 		buf.Reset()
 		// Set log level to Debug for this test

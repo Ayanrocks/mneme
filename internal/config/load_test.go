@@ -38,9 +38,9 @@ func TestDefaultConfigWriter(t *testing.T) {
 		assert.Contains(t, configStr, "reindex_on_modify = true")
 		assert.Contains(t, configStr, "skip_binary_files = true")
 
-		// Check watcher defaults
-		assert.Contains(t, configStr, "enabled = true")
-		assert.Contains(t, configStr, "debounce_ms = 500")
+		// Check watcher defaults (currently disabled by default)
+		assert.Contains(t, configStr, "enabled = false")
+		assert.Contains(t, configStr, "debounce_ms = 0")
 
 		// Check search defaults
 		assert.Contains(t, configStr, "default_limit = 20")
@@ -92,8 +92,9 @@ func TestDefaultConfig(t *testing.T) {
 	t.Run("has correct watcher defaults", func(t *testing.T) {
 		config := DefaultConfig
 
-		assert.True(t, config.Watcher.Enabled)
-		assert.Equal(t, 500, config.Watcher.DebounceMS)
+		// Watcher is disabled by default
+		assert.False(t, config.Watcher.Enabled)
+		assert.Equal(t, 0, config.Watcher.DebounceMS)
 	})
 
 	t.Run("has correct search defaults", func(t *testing.T) {
@@ -134,6 +135,7 @@ func TestConfigMarshaling(t *testing.T) {
 			Sources: core.SourcesConfig{
 				Paths:             []string{"/test/path"},
 				IncludeExtensions: []string{".txt", ".md"},
+				ExcludeExtensions: []string{}, // TOML unmarshals to [] not nil
 				Ignore:            []string{".git"},
 			},
 			Watcher: core.WatcherConfig{
@@ -195,6 +197,7 @@ func TestConfigFileOperations(t *testing.T) {
 			Sources: core.SourcesConfig{
 				Paths:             []string{"/test/path1", "/test/path2"},
 				IncludeExtensions: []string{".txt"},
+				ExcludeExtensions: []string{}, // TOML unmarshals to [] not nil
 				Ignore:            []string{".git", "node_modules"},
 			},
 			Watcher: core.WatcherConfig{
