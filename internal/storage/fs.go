@@ -21,6 +21,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// ErrNoSegments is returned when there are no segments available to search
+var ErrNoSegments = errors.New("no segments found: please run 'mneme index' first to create an index")
+
 // CreateDir Create directory function
 func CreateDir(path string) error {
 	expandedPath, err := utils.ExpandFilePath(path)
@@ -732,7 +735,7 @@ func LoadAllChunks() (*core.Segment, error) {
 	completeChunks := manifest.GetCompleteChunks()
 	if len(completeChunks) == 0 {
 		logger.Warn("No complete chunks found in manifest")
-		return nil, fmt.Errorf("no complete chunks found")
+		return nil, ErrNoSegments
 	}
 
 	// Merge all chunks into a single segment
