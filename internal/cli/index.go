@@ -105,8 +105,8 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	registry := ingest.NewRegistry()
 
 	// Register filesystem ingestor (enabled by default)
-	if config.Sources.Filesystem.Enabled {
-		fsIngestor := ingest.NewFilesystemIngestor(paths, &config.Sources.Filesystem)
+	fsIngestor := ingest.NewFilesystemIngestor(paths, &config.Sources.Filesystem)
+	if fsIngestor.IsEnabled() {
 		registry.Register(fsIngestor)
 		logger.Debugf("Registered filesystem ingestor with %d paths", len(paths))
 	}
