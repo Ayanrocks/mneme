@@ -1,137 +1,150 @@
+<div align="center">
+  <img src="assets/logo.png" alt="Mneme Logo" width="200" height="200">
 
-## Code Folder Structure
+  # Mneme
 
-```aiignore
+  **The Personal Search Engine for your Digital Brain**
 
-mneme/
-├── cmd/
-│   └── mneme/
-│       └── main.go            # Entry point (wires CLI, no logic)
-│
-├── internal/
-│   ├── cli/                   # CLI commands & argument parsing
-│   │   ├── root.go            # Root command definition
-│   │   ├── init.go            # `mneme init`
-│   │   ├── find.go            # `mneme find`
-│   │   ├── index.go           # `mneme index`
-│   │   └── status.go          # `mneme status`
-│   │
-│   ├── core/                  # Domain types (pure, no IO)
-│   │   ├── document.go
-│   │   ├── metadata.go
-│   │   └── types.go
-│   │
-│   ├── ingest/                # Data ingestion & normalisation
-│   │   ├── fs.go              # Filesystem ingestion
-│   │   ├── git.go             # Git repository ingestion
-│   │   ├── stdin.go           # STDIN ingestion
-│   │   ├── pdf.go             # PDF text extraction
-│   │   └── normalise.go       # Text cleanup & token prep
-│   │
-│   ├── index/                 # Inverted index implementation
-│   │   ├── builder.go         # Builds in-memory indexes
-│   │   ├── tokenizer.go       # Tokenisation logic
-│   │   ├── postings.go        # Token → docID mappings
-│   │   ├── segment.go         # Immutable index segments
-│   │   └── merge.go           # Segment compaction
-│   │
-│   ├── query/                 # Query parsing & execution
-│   │   ├── parse.go
-│   │   ├── plan.go
-│   │   └── execute.go
-│   │
-│   ├── rank/                  # Scoring & ranking heuristics
-│   │   ├── tfidf.go
-│   │   ├── recency.go
-│   │   └── score.go
-│   │
-│   ├── storage/               # Filesystem paths & persistence
-│   │   ├── paths.go           # XDG path resolution
-│   │   ├── init.go            # Directory creation & checks
-│   │   ├── segments.go        # Segment persistence
-│   │   ├── metadata.go        # Metadata storage
-│   │   ├── tombstone.go       # Deletions tracking
-│   │   └── lock.go            # Writer locks
-│   │
-│   ├── watcher/               # Filesystem change detection
-│   │   └── watcher.go
-│   │
-│   ├── server/                # Local HTTP server (optional)
-│   │   ├── http.go
-│   │   ├── handlers.go
-│   │   └── middleware.go
-│   │
-│   └── util/                  # Shared helpers (small, boring)
-│
-├── data/                      # Test fixtures & sample documents
-│
-├── scripts/                   # Dev & build helpers
-│
-├── docs/                      # Design & architecture notes
-│
-├── go.mod
-├── go.sum
-└── README.md
+  [![Go Report Card](https://goreportcard.com/badge/github.com/ayanrocks/mneme)](https://goreportcard.com/report/github.com/ayanrocks/mneme)
+  ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+  ![Version](https://img.shields.io/badge/version-0.2.0-green.svg)
+</div>
 
+---
 
+## 📖 Introduction
+
+**Mneme** (/ˈniːmiː/; Greek: Μνήμη) (named after the Greek muse of memory) is a powerful, local-first search engine designed to index and retrieve your personal documents, code, and notes with lightning speed. Unlike diverse `grep` tools, Mneme builds a persistent, optimized index of your content, allowing for instant search results with relevance ranking.
+
+Whether you have thousands of markdown notes, a vast library of PDF documents, or a sprawl of code repositories, Mneme helps you recall information instantly.
+
+## ✨ Features
+
+- **🚀 Blazing Fast Indexing**: Utilizes LSM-tree inspired batch processing to handle large datasets with minimal memory footprint.
+- **🧠 Smart Ranking**: Implements **BM25** and **Vector Space Model (VSM)** algorithms to surface the most relevant results, not just keyword matches.
+- **🔍 Content Awareness**: 
+    - Automatically detects and skips binary files (images, videos, executables).
+    - Supports pluggable ingestors for future expansion (e.g., Google Drive, GitHub).
+- **📝 Rich Snippets**: Generates context-aware snippets with accurate highlighting of search terms.
+- **🛡️ Safe Storage**: includes a "Tombstone" mechanism to safely handle deletions and updates without immediate data loss.
+- **⚙️ highly Configurable**: Customize everything from indexing paths to ranking algorithms via a simple TOML configuration.
+
+## 📦 Installation
+
+Ensure you have **Go 1.21+** installed.
+
+```bash
+go install github.com/ayanrocks/mneme@latest
 ```
 
-## Mneme System Folder Structure
+Verify the installation:
 
-```aiignore
-mneme/
-├── meta/
-│   ├── documents.db        # Document ID ↔ metadata mappings
-│   └── instance_id         # Unique identifier for this Mneme instance
-│
-├── segments/
-│   ├── segment_0001.idx    # Immutable inverted index segment
-│   ├── segment_0002.idx
-│   └── ...
-│
-├── tombstones/
-│   └── deleted.ids         # Records of deleted or superseded documents
-│
-├── lock/
-│   └── mneme.lock          # Prevents concurrent writers
-│
-└── VERSION                 # Storage format version
-
+```bash
+mneme version
 ```
 
+## 🚀 Quick Start
+
+1.  **Initialize Mneme**:
+    Set up the configuration and data directories.
+    ```bash
+    mneme init
+    ```
+
+2.  **Configure**:
+    Add the directories you want to index.
+    ```bash
+    mneme config add /Users/username/docs
+    ```
+
+3.  **Index Your Data**:
+    Build the search index.
+    ```bash
+    mneme index
+    ```
+
+4.  **Search**:
+    Find what you need instantly.
+    ```bash
+    mneme find "project architecture"
+    ```
+
+## ⚙️ Configuration
+
+Start with the default configuration generated by `mneme init`. Customize it in `~/.config/mneme/mneme.toml`.
 
 ```toml
-version = 1
+[sources]
+# Lists of directories to index recursively
+paths = ['/path/to/docs', '/path/to/code']
+# Specific extensions to include (empty = all text files)
+include_extensions = ['.md', '.txt', '.go', '.py']
+# Specific extensions to exclude
+exclude_extensions = ['.log', '.tmp']
+# Folders to ignore
+ignore = ['.git', 'node_modules', 'vendor']
 
 [index]
-segment_size = 500
-max_tokens_per_document = 10000
-reindex_on_modify = true
+# Skip binary files like images/videos (recommended: true)
 skip_binary_files = true
 
-[sources]
-paths = ['/Users/ayanrocks/Developer/TextTesting', '/Users/ayanrocks/Developer/Krikad-Be', '/Users/ayanrocks/Developer/PrismPlay', '/Users/ayanrocks/Developer/TripYatra', '/Users/ayanrocks/Developer/starship']
-include_extensions = []
-ignore = ['.git', 'node_modules', '.vscode', '.idea', 'vendor', '.cache', 'target', 'build']
-
-[watcher]
-enabled = true
-debounce_ms = 500
-
 [search]
-default_limit = 40
-use_stopwords = true
-language = 'en'
+# Number of results to return
+default_limit = 20
 
 [ranking]
-tfidf_weight = 1.0
-recency_weight = 0.3
-title_boost = 1.5
-path_boost = 1.2
-recency_half_life_days = 30
-
-[logging]
-level = 'info'
-json = true
-
+# Customize ranking weights
+bm25_k1 = 1.2
+bm25_b = 0.75
 ```
+
+## 🛠️ Usage
+
+### `mneme config`
+Manage configuration.
+- **Commands**:
+    - `show`: Display current configuration.
+    - `add <path>`: Add a directory to index.
+    - `remove <path> [-a|--all]`: Remove a directory from index.
+
+### `mneme index`
+Crawls your configured paths and builds/updates the search index.
+- **Flags**:
+    - `-v, --verbose`: Show detailed progress.
+    - `-q, --quiet`: Only show errors.
+
+### `mneme find <query>`
+Searches the index for the given query phrase.
+- **Example**: `mneme find "deploy production"`
+
+### `mneme clean`
+Manages the storage engine.
+- **Usage**: `mneme clean` helps recover space by removing old index segments and tombstones.
+
+## 🧪 Testing
+
+Mneme includes a comprehensive test suite.
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test -race -coverprofile=coverage.out -covermode=atomic ./...
+```
+
+For more details on the testing infrastructure, benchmarks, and CI/CD pipeline, please refer to [TESTING.md](TESTING.md).
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1.  Fork the repository.
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
