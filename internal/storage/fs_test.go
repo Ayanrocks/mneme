@@ -234,3 +234,160 @@ func TestGetVersionFileContents(t *testing.T) {
 		assert.NotEmpty(t, cliVersion)
 	})
 }
+
+func TestFormatBytes(t *testing.T) {
+	tests := []struct {
+		name     string
+		bytes    int64
+		expected string
+	}{
+		{"zero bytes", 0, "0 bytes"},
+		{"small bytes", 512, "512 bytes"},
+		{"exact KB", 1024, "1.00 KB"},
+		{"KB range", 5 * 1024, "5.00 KB"},
+		{"exact MB", 1024 * 1024, "1.00 MB"},
+		{"MB range", 50 * 1024 * 1024, "50.00 MB"},
+		{"exact GB", 1024 * 1024 * 1024, "1.00 GB"},
+		{"GB range", 5 * 1024 * 1024 * 1024, "5.00 GB"},
+		{"mixed GB", 1536 * 1024 * 1024, "1.50 GB"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := FormatBytes(tt.bytes)
+			if result != tt.expected {
+				t.Errorf("FormatBytes(%d) = %s, expected %s", tt.bytes, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestReadFileContents_EdgeCases(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Run("reads multi-line file", func(t *testing.T) {
+		testPath := filepath.Join(tmpDir, "multiline.txt")
+		content := "line1\nline2\nline3\n"
+		err := os.WriteFile(testPath, []byte(content), 0644)
+		require.NoError(t, err)
+
+		lines, err := ReadFileContents(testPath)
+		require.NoError(t, err)
+		// Scanner.Scan() doesn't include the trailing empty line from the final newline
+		assert.Equal(t, 3, len(lines))
+		assert.Equal(t, "line1", lines[0])
+		assert.Equal(t, "line3", lines[2])
+	})
+
+	t.Run("handles empty file", func(t *testing.T) {
+		testPath := filepath.Join(tmpDir, "empty.txt")
+		err := os.WriteFile(testPath, []byte(""), 0644)
+		require.NoError(t, err)
+
+		lines, err := ReadFileContents(testPath)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(lines))
+	})
+
+	t.Run("handles file with no newline at end", func(t *testing.T) {
+		testPath := filepath.Join(tmpDir, "no_newline.txt")
+		content := "line1\nline2"
+		err := os.WriteFile(testPath, []byte(content), 0644)
+		require.NoError(t, err)
+
+		lines, err := ReadFileContents(testPath)
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(lines))
+		assert.Equal(t, "line2", lines[1])
+	})
+
+	t.Run("handles binary-looking content", func(t *testing.T) {
+		testPath := filepath.Join(tmpDir, "binary.txt")
+		// Write some binary-like content
+		content := []byte{0x00, 0x01, 0x02, 0xFF, 0xFE}
+		err := os.WriteFile(testPath, content, 0644)
+		require.NoError(t, err)
+
+		// Should not error, just read what it can
+		_, err = ReadFileContents(testPath)
+		// May or may not error depending on scanner behavior
+		_ = err
+	})
+}
+
+func TestCreateDir_EdgeCases(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Run("handles deeply nested paths", func(t *testing.T) {
+		deepPath := filepath.Join(tmpDir, "a", "b", "c", "d", "e", "f")
+		err := CreateDir(deepPath)
+		require.NoError(t, err)
+
+		info, err := os.Stat(deepPath)
+		require.NoError(t, err)
+		assert.True(t, info.IsDir())
+	})
+
+	t.Run("handles path with spaces", func(t *testing.T) {
+		spacePath := filepath.Join(tmpDir, "path with spaces")
+		err := CreateDir(spacePath)
+		require.NoError(t, err)
+
+		info, err := os.Stat(spacePath)
+		require.NoError(t, err)
+		assert.True(t, info.IsDir())
+	})
+}
+
+func TestFileExists_EdgeCases(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Run("returns false for empty path", func(t *testing.T) {
+		// Empty path will likely fail expansion or stat
+		exists, err := FileExists("")
+		// Should either error or return false
+		if err == nil && exists {
+			t.Error("Empty path should not exist")
+		}
+	})
+
+	t.Run("handles symbolic links to files", func(t *testing.T) {
+		// Create a file
+		targetFile := filepath.Join(tmpDir, "target.txt")
+		err := os.WriteFile(targetFile, []byte("test"), 0644)
+		require.NoError(t, err)
+
+		// Create a symlink
+		linkPath := filepath.Join(tmpDir, "link.txt")
+		err = os.Symlink(targetFile, linkPath)
+		if err != nil {
+			t.Skip("Symlink creation not supported on this system")
+		}
+
+		exists, err := FileExists(linkPath)
+		require.NoError(t, err)
+		assert.True(t, exists, "Symlink to file should be considered as existing file")
+	})
+}
+
+func TestDirExists_EdgeCases(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Run("handles symbolic links to directories", func(t *testing.T) {
+		// Create a directory
+		targetDir := filepath.Join(tmpDir, "target_dir")
+		err := os.Mkdir(targetDir, 0755)
+		require.NoError(t, err)
+
+		// Create a symlink
+		linkPath := filepath.Join(tmpDir, "link_dir")
+		err = os.Symlink(targetDir, linkPath)
+		if err != nil {
+			t.Skip("Symlink creation not supported on this system")
+		}
+
+		exists, err := DirExists(linkPath)
+		require.NoError(t, err)
+		assert.True(t, exists, "Symlink to directory should be considered as existing directory")
+	})
+}

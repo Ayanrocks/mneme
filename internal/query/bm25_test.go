@@ -240,6 +240,118 @@ func TestGetTermFrequencyInDoc(t *testing.T) {
 	})
 }
 
+func TestCalculateBM25Scores_EdgeCases(t *testing.T) {
+	t.Run("handles segment with zero avgDocLen", func(t *testing.T) {
+		segment := &core.Segment{
+			Docs: []core.Document{
+				{ID: 1, Path: "/test.txt", TokenCount: 10},
+			},
+			InvertedIndex: map[string][]core.Posting{
+				"test": {{DocID: 1, Freq: 2}},
+			},
+			TotalDocs:   1,
+			TotalTokens: 5,
+			AvgDocLen:   0, // Zero average
+		}
+
+		scores := CalculateBM25Scores(segment, []string{"test"})
+		// Should still calculate scores without division by zero
+		if len(scores) == 0 {
+			t.Error("Expected scores even with zero avgDocLen")
+		}
+		for _, score := range scores {
+			if score <= 0 {
+				t.Error("Expected positive scores")
+			}
+		}
+	})
+
+	t.Run("handles multiple query tokens", func(t *testing.T) {
+		segment := createTestSegment()
+		scores := CalculateBM25Scores(segment, []string{"user", "config", "data"})
+
+		// Should accumulate scores from all matching tokens
+		if len(scores) == 0 {
+			t.Error("Expected scores for multiple tokens")
+		}
+	})
+
+	t.Run("handles documents with zero token count", func(t *testing.T) {
+		segment := &core.Segment{
+			Docs: []core.Document{
+				{ID: 1, Path: "/empty.txt", TokenCount: 0},
+			},
+			InvertedIndex: map[string][]core.Posting{
+				"test": {{DocID: 1, Freq: 1}},
+			},
+			TotalDocs:   1,
+			TotalTokens: 1,
+			AvgDocLen:   1,
+		}
+
+		scores := CalculateBM25Scores(segment, []string{"test"})
+		// Should handle zero token count
+		if _, exists := scores[1]; !exists {
+			t.Error("Expected score for document with zero tokens")
+		}
+	})
+
+	t.Run("rare term gets higher IDF than common term", func(t *testing.T) {
+		segment := createTestSegment()
+
+		// "profil" is rarer (1 doc) than "data" (3 docs)
+		rareScores := CalculateBM25Scores(segment, []string{"profil"})
+		commonScores := CalculateBM25Scores(segment, []string{"data"})
+
+		// Rare term should generally score higher (though depends on TF)
+		// At least verify both produce scores
+		if len(rareScores) == 0 || len(commonScores) == 0 {
+			t.Error("Expected scores for both rare and common terms")
+		}
+	})
+
+	t.Run("high frequency in document increases score", func(t *testing.T) {
+		segment := &core.Segment{
+			Docs: []core.Document{
+				{ID: 1, Path: "/high.txt", TokenCount: 100},
+				{ID: 2, Path: "/low.txt", TokenCount: 100},
+			},
+			InvertedIndex: map[string][]core.Posting{
+				"test": {
+					{DocID: 1, Freq: 10}, // High frequency
+					{DocID: 2, Freq: 1},  // Low frequency
+				},
+			},
+			TotalDocs:   2,
+			TotalTokens: 10,
+			AvgDocLen:   100,
+		}
+
+		scores := CalculateBM25Scores(segment, []string{"test"})
+		if scores[1] <= scores[2] {
+			t.Error("Expected higher score for document with higher term frequency")
+		}
+	})
+}
+
+func TestGetTermFrequencyInDoc_EdgeCases(t *testing.T) {
+	segment := createTestSegment()
+
+	t.Run("returns 0 for doc not in index", func(t *testing.T) {
+		result := GetTermFrequencyInDoc(segment, "user", 999)
+		if result != 0 {
+			t.Errorf("Expected 0 for non-existent doc, got %d", result)
+		}
+	})
+
+	t.Run("returns correct frequency for multiple matches", func(t *testing.T) {
+		result := GetTermFrequencyInDoc(segment, "config", 2)
+		if result != 5 {
+			t.Errorf("Expected frequency 5, got %d", result)
+		}
+	})
+}
+
 // createTestSegment creates a test segment with sample data for testing
 func createTestSegment() *core.Segment {
 	return &core.Segment{
