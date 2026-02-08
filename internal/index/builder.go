@@ -84,12 +84,12 @@ func IndexBuilder(paths []string, crawlerOptions *core.CrawlerOptions) *core.Seg
 // Returns a manifest tracking all created chunks.
 // DEPRECATED: Use IndexBuilderBatchedWithRegistry for pluggable source support.
 func IndexBuilderBatched(paths []string, crawlerOptions *core.CrawlerOptions, config *core.BatchConfig) (*core.Manifest, error) {
-	if !config.SuppressLogs {
-		logger.Info("Starting IndexBuilderBatched")
-	}
-
 	if config == nil {
 		config = core.DefaultBatchConfig()
+	}
+
+	if !config.SuppressLogs {
+		logger.Info("Starting IndexBuilderBatched")
 	}
 
 	// First, collect all file paths from all sources

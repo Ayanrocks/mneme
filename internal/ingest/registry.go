@@ -1,9 +1,13 @@
 package ingest
 
 import (
+	"errors"
+	"fmt"
 	"mneme/internal/core"
 	"mneme/internal/logger"
 )
+
+var ErrDocumentNotFound = errors.New("document not found")
 
 // Registry manages multiple ingestors and provides unified access to all sources.
 type Registry struct {
@@ -62,7 +66,7 @@ func (r *Registry) ReadDocument(id string) (*Document, error) {
 			return doc, nil
 		}
 	}
-	return nil, nil
+	return nil, fmt.Errorf("%w: %s", ErrDocumentNotFound, id)
 }
 
 // GetIngestorForDocument returns the ingestor that can handle this document ID.

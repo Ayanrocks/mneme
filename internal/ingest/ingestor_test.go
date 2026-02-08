@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"errors"
 	"mneme/internal/core"
 	"os"
 	"path/filepath"
@@ -176,5 +177,19 @@ func TestRegistry_ReadDocument(t *testing.T) {
 
 	if len(doc.Contents) != 2 {
 		t.Errorf("Expected 2 lines, got %d", len(doc.Contents))
+	}
+}
+
+func TestRegistry_ReadDocument_NotFound(t *testing.T) {
+	registry := NewRegistry()
+	// No ingestors registered
+
+	_, err := registry.ReadDocument("nonexistent")
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !errors.Is(err, ErrDocumentNotFound) {
+		t.Errorf("Expected error to wrap ErrDocumentNotFound, got %v", err)
 	}
 }

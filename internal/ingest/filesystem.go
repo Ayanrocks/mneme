@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"log"
 	"mneme/internal/core"
 	"mneme/internal/storage"
 )
@@ -30,12 +31,17 @@ func (f *FilesystemIngestor) Name() string {
 
 // Crawl uses the existing storage.Crawler to discover files.
 func (f *FilesystemIngestor) Crawl(options *core.CrawlerOptions) ([]string, error) {
+	if options == nil {
+		defaultOpts := core.DefaultCrawlerOptions()
+		options = &defaultOpts
+	}
+
 	allFiles := make([]string, 0)
 
 	for _, path := range f.paths {
 		crawlPaths, err := storage.Crawler(path, *options)
 		if err != nil {
-			// Log error but continue with other paths
+			log.Printf("Error crawling path %s: %v", path, err)
 			continue
 		}
 		allFiles = append(allFiles, crawlPaths...)
