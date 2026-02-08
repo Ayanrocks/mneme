@@ -98,6 +98,16 @@ bm25_k1 = 1.2
 bm25_b = 0.75
 ```
 
+## 📂 Data Storage
+
+Mneme stores its index and metadata in `~/.local/share/mneme`.
+
+- **`segments/`**: Contains the active search index segments.
+- **`tombstones/`**: Holds old index files that have been replaced but not yet permanently deleted.
+- **`meta/`**: Stores metadata about the index state.
+
+Run `mneme clean` to clear out the `tombstones` directory and reclaim disk space.
+
 ## 🛠️ Usage
 
 ### `mneme config`
