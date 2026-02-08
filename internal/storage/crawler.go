@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"mneme/internal/core"
 	"mneme/internal/logger"
 	"mneme/internal/utils"
 	"os"
@@ -59,47 +60,10 @@ var BinaryExtensions = map[string]bool{
 	"lock": true, "DS_Store": true, "localized": true, "map.js": true,
 }
 
-// CrawlerOptions contains configuration for the file crawler
-type CrawlerOptions struct {
-	// IncludeExtensions is a list of file extensions to include (without the leading dot, e.g., "go", "py")
-	// If empty, all extensions are included. If non-empty, only files with these extensions are included.
-	IncludeExtensions []string
-
-	// ExcludeExtensions is a list of file extensions to exclude (without the leading dot, e.g., "log", "tmp")
-	// Files with these extensions will be skipped even if they match IncludeExtensions.
-	ExcludeExtensions []string
-
-	// SkipFolders is a list of folder names to skip entirely
-	SkipFolders []string
-
-	// MaxFilesPerFolder is the maximum number of files to process per folder
-	// If a folder contains more files than this limit, it will be skipped
-	// Set to 0 or negative to disable this limit
-	MaxFilesPerFolder int
-
-	// IncludeHidden determines whether to include hidden files/folders (those starting with .)
-	IncludeHidden bool
-
-	// SkipBinaryFiles determines whether to skip binary and non-readable file types
-	// When true, files with extensions in BinaryExtensions will be skipped
-	SkipBinaryFiles bool
-}
-
-// DefaultCrawlerOptions returns a CrawlerOptions with sensible defaults
-func DefaultCrawlerOptions() CrawlerOptions {
-	return CrawlerOptions{
-		IncludeExtensions: []string{},
-		ExcludeExtensions: []string{},
-		SkipFolders:       []string{".git", "node_modules", ".svn", ".hg", "__pycache__", ".idea", ".vscode"},
-		MaxFilesPerFolder: 0, // No limit by default
-		IncludeHidden:     false,
-	}
-}
-
 // Crawler crawls the given path and returns a list of file paths
 // If the path is a file, it returns that single file path
 // If the path is a directory, it recursively crawls all files and nested folders
-func Crawler(inputPath string, options CrawlerOptions) ([]string, error) {
+func Crawler(inputPath string, options core.CrawlerOptions) ([]string, error) {
 	expandedPath, err := utils.ExpandFilePath(inputPath)
 	if err != nil {
 		logger.Errorf("Error expanding path: %+v", err)
@@ -149,7 +113,7 @@ func Crawler(inputPath string, options CrawlerOptions) ([]string, error) {
 }
 
 // crawlDirectory recursively crawls a directory and appends file paths to results
-func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]bool, excludeExtMap map[string]bool, skipFolderMap map[string]bool, options CrawlerOptions) error {
+func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]bool, excludeExtMap map[string]bool, skipFolderMap map[string]bool, options core.CrawlerOptions) error {
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
 		logger.Errorf("Error reading directory %s: %+v", dirPath, err)
@@ -219,7 +183,7 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 }
 
 // shouldSkipFile checks if a file should be skipped based on options
-func shouldSkipFile(filePath string, options CrawlerOptions) bool {
+func shouldSkipFile(filePath string, options core.CrawlerOptions) bool {
 	fileName := filepath.Base(filePath)
 
 	// Check hidden files

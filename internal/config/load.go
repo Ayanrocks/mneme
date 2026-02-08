@@ -27,6 +27,9 @@ var DefaultConfig = core.Config{
 		IncludeExtensions: []string{},
 		ExcludeExtensions: []string{},
 		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache", "target", "build"},
+		Filesystem: core.FilesystemSourceConfig{
+			Enabled: true,
+		},
 	},
 	// Watcher: core.WatcherConfig{
 	// 	Enabled:    true,

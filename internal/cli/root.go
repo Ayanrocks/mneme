@@ -87,6 +87,7 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(indexCmd)
 	rootCmd.AddCommand(findCmd)
+	rootCmd.AddCommand(cleanCmd)
 }
 
 // IsInitialized checks if the init command was run by verifying that the

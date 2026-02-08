@@ -3,8 +3,10 @@ package cli
 import (
 	"mneme/internal/config"
 	"mneme/internal/constants"
+	"mneme/internal/core"
 	"mneme/internal/display"
 	"mneme/internal/index"
+	"mneme/internal/ingest"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
 	"mneme/internal/utils"
@@ -56,19 +58,19 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		// A lock exists, check if it's stale
 		isStale, staleErr := storage.IsLockStale(dataDir)
 		if staleErr != nil {
-			logger.Errorf("Failed to check if lock is stale: %+v", staleErr)
+			logger.PrintError("Failed to check if lock is stale: %+v", staleErr)
 			return
 		}
 
 		if isStale {
 			logger.Warn("Found stale lock, clearing it...")
 			if releaseErr := storage.ReleaseLock(dataDir); releaseErr != nil {
-				logger.Errorf("Failed to release stale lock: %+v", releaseErr)
+				logger.PrintError("Failed to release stale lock: %+v", releaseErr)
 				return
 			}
 		} else {
 			// Lock is held by an active process
-			logger.Errorf("Failed to acquire lock: %+v", err)
+			logger.PrintError("Failed to acquire lock: %+v", err)
 			return
 		}
 	}
@@ -76,21 +78,21 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	// Now acquire the lock
 	err = storage.AcquireLock(dataDir)
 	if err != nil {
-		logger.Errorf("Failed to acquire lock: %+v", err)
+		logger.PrintError("Failed to acquire lock: %+v", err)
 		return
 	}
 
 	// defer the release of the lock
 	defer storage.ReleaseLock(dataDir)
 
-	// Clear existing segments before re-indexing
-	err = storage.ClearSegments()
+	// Move existing segments to tombstones before re-indexing
+	err = storage.MoveSegmentsToTombstones()
 	if err != nil {
-		logger.Errorf("Failed to clear segments: %+v", err)
+		logger.PrintError("Failed to move segments to tombstones: %+v", err)
 		return
 	}
 
-	crawlerOptions := storage.CrawlerOptions{
+	crawlerOptions := core.CrawlerOptions{
 		IncludeExtensions: config.Sources.IncludeExtensions,
 		ExcludeExtensions: config.Sources.ExcludeExtensions,
 		SkipFolders:       config.Sources.Ignore,
@@ -99,8 +101,18 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		SkipBinaryFiles:   config.Index.SkipBinaryFiles,
 	}
 
+	// Create ingestor registry and register enabled sources
+	registry := ingest.NewRegistry()
+
+	// Register filesystem ingestor (enabled by default)
+	fsIngestor := ingest.NewFilesystemIngestor(paths, &config.Sources.Filesystem)
+	if fsIngestor.IsEnabled() {
+		registry.Register(fsIngestor)
+		logger.Debugf("Registered filesystem ingestor with %d paths", len(paths))
+	}
+
 	// Use batch indexing to reduce memory usage
-	batchConfig := index.DefaultBatchConfig()
+	batchConfig := core.DefaultBatchConfig()
 
 	// Check if we should show progress bar (only when log level is "info")
 	if display.ShouldShowProgress() {
@@ -108,7 +120,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		pb := display.NewProgressBar("Indexing", 0)
 		pb.Start()
 
-		// Set up progress callback - this will be called by IndexBuilderBatched
+		// Set up progress callback - this will be called by IndexBuilderBatchedWithRegistry
 		batchConfig.ProgressCallback = func(current, total int, message string) {
 			pb.SetTotal(total)
 			pb.SetCurrent(current)
@@ -118,7 +130,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		// Suppress regular logging during progress bar by setting NoLogging flag
 		batchConfig.SuppressLogs = true
 
-		manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
+		manifest, err := index.IndexBuilderBatchedWithRegistry(registry, &crawlerOptions, batchConfig)
 		pb.Complete()
 
 		if err != nil {
@@ -133,11 +145,12 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 
 		logger.Print("Indexing completed: %d chunks, %d docs, %d tokens",
 			len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
+		CheckTombstonesAndHint()
 	} else {
 		// No progress bar - regular logging mode
 		logger.Infof("Starting batch indexing (batch size: %d files)", batchConfig.BatchSize)
 
-		manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
+		manifest, err := index.IndexBuilderBatchedWithRegistry(registry, &crawlerOptions, batchConfig)
 		if err != nil {
 			logger.Errorf("Failed to build index: %+v", err)
 			return
@@ -150,5 +163,6 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 
 		logger.Infof("Indexing completed successfully: %d chunks, %d docs, %d tokens",
 			len(manifest.Chunks), manifest.TotalDocs, manifest.TotalTokens)
+		CheckTombstonesAndHint()
 	}
 }
