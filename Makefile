@@ -95,6 +95,32 @@ build-dev:
 	@echo "Build complete: ./mneme"
 	@echo ""
 
+.PHONY: build-linux
+build-linux:
+	@echo "Building for Linux (amd64)..."
+	GOOS=linux GOARCH=amd64 $(GO) build -ldflags="-s -w" -o dist/mneme-linux-amd64 ./cmd/mneme
+	@echo "Build complete: dist/mneme-linux-amd64"
+
+.PHONY: build-windows
+build-windows:
+	@echo "Building for Windows (amd64)..."
+	GOOS=windows GOARCH=amd64 $(GO) build -ldflags="-s -w" -o dist/mneme-windows-amd64.exe ./cmd/mneme
+	@echo "Build complete: dist/mneme-windows-amd64.exe"
+
+.PHONY: build-macos
+build-macos:
+	@echo "Building for macOS (amd64)..."
+	GOOS=darwin GOARCH=amd64 $(GO) build -ldflags="-s -w" -o dist/mneme-darwin-amd64 ./cmd/mneme
+	@echo "Build complete: dist/mneme-darwin-amd64"
+	@echo "Building for macOS (arm64)..."
+	GOOS=darwin GOARCH=arm64 $(GO) build -ldflags="-s -w" -o dist/mneme-darwin-arm64 ./cmd/mneme
+	@echo "Build complete: dist/mneme-darwin-arm64"
+
+.PHONY: release
+release: clean build-linux build-windows build-macos
+	@echo "Release build complete. Artifacts in dist/"
+
+
 # Clean targets
 .PHONY: clean
 clean:

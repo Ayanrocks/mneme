@@ -148,3 +148,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
+
+<br/>
+<div align="center">
+  <a href="https://buymeacoffee.com/banerjeeayan" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217">
+  </a>
+</div>
