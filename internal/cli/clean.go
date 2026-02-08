@@ -18,7 +18,8 @@ var cleanCmd = &cobra.Command{
 When you run 'mneme index', old index files are moved to the tombstones folder
 instead of being deleted. This prevents accidental data loss. Run 'mneme clean'
 to permanently remove these files and free up disk space.`,
-	Run: cleanCmdExecute,
+	Example: `  mneme clean`,
+	Run:     cleanCmdExecute,
 }
 
 func cleanCmdExecute(cmd *cobra.Command, args []string) {

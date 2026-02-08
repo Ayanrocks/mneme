@@ -15,8 +15,12 @@ import (
 var findCmd = &cobra.Command{
 	Use:   "find",
 	Short: "Find documents",
-	Long:  "Find documents matching the given query, showing relevant snippets",
-	Run:   findCmdExecute,
+	Long: `Find documents matching the given query, showing relevant snippets.
+Results are ranked by relevance using BM25 and Vector Space Model algorithms.`,
+	Example: `  mneme find "machine learning"
+  mneme find python tutorial
+  mneme find "error handling" in go`,
+	Run: findCmdExecute,
 }
 
 func findCmdExecute(cmd *cobra.Command, args []string) {

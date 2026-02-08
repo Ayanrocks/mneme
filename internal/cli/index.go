@@ -16,9 +16,11 @@ import (
 
 var indexCmd = &cobra.Command{
 	Use:   "index",
-	Short: "Create an index",
-	Long:  "Create an index using LSM-style batch processing to reduce memory usage",
-	Run:   indexCmdExecute,
+	Short: "Create or update the search index",
+	Long: `Scans the configured paths and builds a search index for fast retrieval.
+Uses LSM-style batch processing to handle large datasets efficiently with minimal memory usage.`,
+	Example: `  mneme index`,
+	Run:     indexCmdExecute,
 }
 
 func indexCmdExecute(cmd *cobra.Command, args []string) {

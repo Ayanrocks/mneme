@@ -32,7 +32,8 @@ func getLogLevelFromConfig() string {
 var rootCmd = &cobra.Command{
 	Use:   "mneme",
 	Short: "Mneme - A powerful personal search engine",
-	Long:  `Mneme - a powerful search engine to search for all the personal documents, repos, files`,
+	Long: `Mneme is a powerful search engine for your personal documents, code repositories, and notes.
+It allows you to index and search through your local files with ease, providing fast and relevant results.`,
 
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize logger after flags are parsed, with log level from config
@@ -51,22 +52,28 @@ var rootCmd = &cobra.Command{
 		logger.Debug("Checking available commands...")
 		logger.Debug("Application ready")
 	},
+	Example: `  mneme
+  mneme --help
+  mneme --verbose`,
 }
 
 var versionCmd = &cobra.Command{
 	Use:     "version",
 	Aliases: []string{"v"},
 	Short:   "Show version information",
-	Long:    `Display the current version of Mneme.`,
+	Long:    `Display the current version of Mneme, along with the storage engine version and Go runtime version.`,
+	Example: `  mneme version
+  mneme v`,
 
 	Run: versionCmdExecute,
 }
 
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initializing mneme setup with indexing",
-	Long:  `Initializing mneme setup with indexing`,
-	Run:   initCmdExecute,
+	Use:     "init",
+	Short:   "Initialize mneme setup",
+	Long:    `Initialize mneme setup, creating necessary configuration files and data directories.`,
+	Example: `  mneme init`,
+	Run:     initCmdExecute,
 }
 
 func Execute() error {
