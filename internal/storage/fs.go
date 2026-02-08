@@ -73,7 +73,11 @@ func FileExists(path string) (bool, error) {
 
 // ReadVersionFile reads and returns the contents of the VERSION file
 func ReadVersionFile() (string, error) {
-	versionPath := filepath.Join(constants.DirPath, "VERSION")
+	return readVersionFileInternal(constants.DirPath)
+}
+
+func readVersionFileInternal(dirPath string) (string, error) {
+	versionPath := filepath.Join(dirPath, "VERSION")
 	expandedPath, err := utils.ExpandFilePath(versionPath)
 	if err != nil {
 		logger.Errorf("Error expanding version path: %+v", err.Error())
@@ -134,7 +138,11 @@ func ParseVersionFile(content string) (storageVersion string, cliVersion string,
 
 // IsVersionCompatible checks if the existing storage version is compatible with current version
 func IsVersionCompatible() (bool, error) {
-	exists, err := FileExists(filepath.Join(constants.DirPath, "VERSION"))
+	return isVersionCompatibleInternal(constants.DirPath)
+}
+
+func isVersionCompatibleInternal(dirPath string) (bool, error) {
+	exists, err := FileExists(filepath.Join(dirPath, "VERSION"))
 	if err != nil {
 		return false, err
 	}
@@ -143,7 +151,7 @@ func IsVersionCompatible() (bool, error) {
 		return false, nil
 	}
 
-	content, err := ReadVersionFile()
+	content, err := readVersionFileInternal(dirPath)
 	if err != nil {
 		return false, err
 	}
@@ -387,8 +395,7 @@ func DirExists(path string) (bool, error) {
 }
 
 func getVersionFileContents() string {
-	return fmt.Sprintf(`
-STORAGE_VERSION: %s
+	return fmt.Sprintf(`STORAGE_VERSION: %s
 MNEME_CLI_VERSION: %s
 `, version.MnemeStorageEngineVersion, version.MnemeVersion)
 }

@@ -69,7 +69,7 @@ func (f *FilesystemIngestor) Read(id string) (*Document, error) {
 // Filesystem is enabled by default if no config is provided.
 func (f *FilesystemIngestor) IsEnabled() bool {
 	if f.config == nil {
-		return true // Default enabled
+		return len(f.paths) > 0
 	}
-	return f.config.Enabled
+	return f.config.IsEnabled(f.paths)
 }

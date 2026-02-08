@@ -65,6 +65,13 @@ func (r *Registry) ReadDocument(id string) (*Document, error) {
 		if err == nil {
 			return doc, nil
 		}
+
+		// If the error is something other than "not found", return it immediately
+		if !errors.Is(err, ErrDocumentNotFound) {
+			return nil, err
+		}
+
+		// If it is "not found", continue to the next ingestor
 	}
 	return nil, fmt.Errorf("%w: %s", ErrDocumentNotFound, id)
 }

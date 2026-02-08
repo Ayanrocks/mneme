@@ -12,13 +12,6 @@ func (r RankedDocument) GetScore() float64 {
 	return r.Score
 }
 
-// DocumentScore holds a document with its relevance score
-type DocumentScore struct {
-	DocID uint
-	Path  string
-	Score float64
-}
-
 // TFIDFVector represents a document or query as a TF-IDF weighted vector
 type TFIDFVector struct {
 	Weights map[string]float64

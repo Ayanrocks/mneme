@@ -111,10 +111,6 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		logger.Debugf("Registered filesystem ingestor with %d paths", len(paths))
 	}
 
-	// Future: register other ingestors based on config
-	// if config.Sources.OneDrive != nil && config.Sources.OneDrive.Enabled { ... }
-	// if config.Sources.GDrive != nil && config.Sources.GDrive.Enabled { ... }
-
 	// Use batch indexing to reduce memory usage
 	batchConfig := core.DefaultBatchConfig()
 

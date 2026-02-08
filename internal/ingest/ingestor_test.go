@@ -16,8 +16,8 @@ func TestFilesystemIngestor_Name(t *testing.T) {
 }
 
 func TestFilesystemIngestor_IsEnabled(t *testing.T) {
-	t.Run("enabled by default when config is nil", func(t *testing.T) {
-		ingestor := NewFilesystemIngestor([]string{}, nil)
+	t.Run("enabled by default when config is nil and paths exist", func(t *testing.T) {
+		ingestor := NewFilesystemIngestor([]string{"/tmp"}, nil)
 		if !ingestor.IsEnabled() {
 			t.Error("Expected ingestor to be enabled by default")
 		}
@@ -36,6 +36,14 @@ func TestFilesystemIngestor_IsEnabled(t *testing.T) {
 		ingestor := NewFilesystemIngestor([]string{}, config)
 		if ingestor.IsEnabled() {
 			t.Error("Expected ingestor to be disabled")
+		}
+	})
+
+	t.Run("enabled when paths exist even if config.Enabled is false", func(t *testing.T) {
+		config := &core.FilesystemSourceConfig{Enabled: false}
+		ingestor := NewFilesystemIngestor([]string{"/tmp"}, config)
+		if !ingestor.IsEnabled() {
+			t.Error("Expected ingestor to be enabled due to paths presence")
 		}
 	})
 }
@@ -96,7 +104,7 @@ func TestFilesystemIngestor_Read(t *testing.T) {
 func TestRegistry_Register(t *testing.T) {
 	registry := NewRegistry()
 
-	ingestor := NewFilesystemIngestor([]string{}, nil)
+	ingestor := NewFilesystemIngestor([]string{"/tmp"}, nil)
 	registry.Register(ingestor)
 
 	enabled := registry.GetEnabledIngestors()

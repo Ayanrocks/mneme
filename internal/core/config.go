@@ -32,9 +32,15 @@ type SourcesConfig struct {
 }
 
 // FilesystemSourceConfig holds configuration for local filesystem source.
-// Enabled by default when paths are specified.
+// Source is enabled when paths are provided or when enabled is explicitly set.
+// See IsEnabled() for logic.
 type FilesystemSourceConfig struct {
 	Enabled bool `toml:"enabled"`
+}
+
+// IsEnabled returns true if the source is explicitly enabled OR if paths are provided.
+func (f *FilesystemSourceConfig) IsEnabled(paths []string) bool {
+	return f.Enabled || len(paths) > 0
 }
 
 // OneDriveSourceConfig placeholder for future OneDrive integration.
@@ -79,7 +85,7 @@ type LoggingConfig struct {
 
 // BatchConfig holds configuration for batch indexing
 type BatchConfig struct {
-	BatchSize        int                                      // Number of files per batch (default: 1000)
+	BatchSize        int                                      // Number of files per batch (default: 20000)
 	ProgressCallback func(current, total int, message string) // Optional callback for progress updates
 	SuppressLogs     bool                                     // If true, suppress info logs (used when progress bar is active)
 }
