@@ -20,10 +20,39 @@ type IndexConfig struct {
 }
 
 type SourcesConfig struct {
-	Paths             []string `toml:"paths"`
-	IncludeExtensions []string `toml:"include_extensions"`
-	ExcludeExtensions []string `toml:"exclude_extensions"`
-	Ignore            []string `toml:"ignore"`
+	Paths             []string               `toml:"paths"`
+	IncludeExtensions []string               `toml:"include_extensions"`
+	ExcludeExtensions []string               `toml:"exclude_extensions"`
+	Ignore            []string               `toml:"ignore"`
+	Filesystem        FilesystemSourceConfig `toml:"filesystem"`
+	// Future sources - uncomment when implementing
+	// OneDrive OneDriveSourceConfig `toml:"onedrive"`
+	// GDrive   GDriveSourceConfig   `toml:"gdrive"`
+	// GitHub   GitHubSourceConfig   `toml:"github"`
+}
+
+// FilesystemSourceConfig holds configuration for local filesystem source.
+// Enabled by default when paths are specified.
+type FilesystemSourceConfig struct {
+	Enabled bool `toml:"enabled"`
+}
+
+// OneDriveSourceConfig placeholder for future OneDrive integration.
+type OneDriveSourceConfig struct {
+	Enabled  bool   `toml:"enabled"`
+	LoginKey string `toml:"login_key"`
+}
+
+// GDriveSourceConfig placeholder for future Google Drive integration.
+type GDriveSourceConfig struct {
+	Enabled bool `toml:"enabled"`
+}
+
+// GitHubSourceConfig placeholder for future GitHub integration.
+type GitHubSourceConfig struct {
+	Enabled bool     `toml:"enabled"`
+	Token   string   `toml:"token"`
+	Repos   []string `toml:"repos"`
 }
 
 type WatcherConfig struct {

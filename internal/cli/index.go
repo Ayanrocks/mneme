@@ -6,6 +6,7 @@ import (
 	"mneme/internal/core"
 	"mneme/internal/display"
 	"mneme/internal/index"
+	"mneme/internal/ingest"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
 	"mneme/internal/utils"
@@ -57,19 +58,19 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		// A lock exists, check if it's stale
 		isStale, staleErr := storage.IsLockStale(dataDir)
 		if staleErr != nil {
-			logger.Errorf("Failed to check if lock is stale: %+v", staleErr)
+			logger.PrintError("Failed to check if lock is stale: %+v", staleErr)
 			return
 		}
 
 		if isStale {
 			logger.Warn("Found stale lock, clearing it...")
 			if releaseErr := storage.ReleaseLock(dataDir); releaseErr != nil {
-				logger.Errorf("Failed to release stale lock: %+v", releaseErr)
+				logger.PrintError("Failed to release stale lock: %+v", releaseErr)
 				return
 			}
 		} else {
 			// Lock is held by an active process
-			logger.Errorf("Failed to acquire lock: %+v", err)
+			logger.PrintError("Failed to acquire lock: %+v", err)
 			return
 		}
 	}
@@ -77,7 +78,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	// Now acquire the lock
 	err = storage.AcquireLock(dataDir)
 	if err != nil {
-		logger.Errorf("Failed to acquire lock: %+v", err)
+		logger.PrintError("Failed to acquire lock: %+v", err)
 		return
 	}
 
@@ -87,7 +88,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 	// Move existing segments to tombstones before re-indexing
 	err = storage.MoveSegmentsToTombstones()
 	if err != nil {
-		logger.Errorf("Failed to move segments to tombstones: %+v", err)
+		logger.PrintError("Failed to move segments to tombstones: %+v", err)
 		return
 	}
 
@@ -100,6 +101,20 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		SkipBinaryFiles:   config.Index.SkipBinaryFiles,
 	}
 
+	// Create ingestor registry and register enabled sources
+	registry := ingest.NewRegistry()
+
+	// Register filesystem ingestor (enabled by default)
+	if config.Sources.Filesystem.Enabled {
+		fsIngestor := ingest.NewFilesystemIngestor(paths, &config.Sources.Filesystem)
+		registry.Register(fsIngestor)
+		logger.Debugf("Registered filesystem ingestor with %d paths", len(paths))
+	}
+
+	// Future: register other ingestors based on config
+	// if config.Sources.OneDrive != nil && config.Sources.OneDrive.Enabled { ... }
+	// if config.Sources.GDrive != nil && config.Sources.GDrive.Enabled { ... }
+
 	// Use batch indexing to reduce memory usage
 	batchConfig := core.DefaultBatchConfig()
 
@@ -109,7 +124,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		pb := display.NewProgressBar("Indexing", 0)
 		pb.Start()
 
-		// Set up progress callback - this will be called by IndexBuilderBatched
+		// Set up progress callback - this will be called by IndexBuilderBatchedWithRegistry
 		batchConfig.ProgressCallback = func(current, total int, message string) {
 			pb.SetTotal(total)
 			pb.SetCurrent(current)
@@ -119,7 +134,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		// Suppress regular logging during progress bar by setting NoLogging flag
 		batchConfig.SuppressLogs = true
 
-		manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
+		manifest, err := index.IndexBuilderBatchedWithRegistry(registry, &crawlerOptions, batchConfig)
 		pb.Complete()
 
 		if err != nil {
@@ -139,7 +154,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 		// No progress bar - regular logging mode
 		logger.Infof("Starting batch indexing (batch size: %d files)", batchConfig.BatchSize)
 
-		manifest, err := index.IndexBuilderBatched(paths, &crawlerOptions, batchConfig)
+		manifest, err := index.IndexBuilderBatchedWithRegistry(registry, &crawlerOptions, batchConfig)
 		if err != nil {
 			logger.Errorf("Failed to build index: %+v", err)
 			return

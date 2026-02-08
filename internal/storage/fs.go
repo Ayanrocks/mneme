@@ -708,7 +708,7 @@ func LoadManifest() (*core.Manifest, error) {
 		return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
 	}
 
-	logger.Infof("Manifest loaded successfully with %d chunks", len(manifest.Chunks))
+	logger.Debugf("Manifest loaded successfully with %d chunks", len(manifest.Chunks))
 	return &manifest, nil
 }
 
@@ -763,7 +763,7 @@ func LoadAllChunks() (*core.Segment, error) {
 		AvgDocLen:     manifest.AvgDocLen,
 	}
 
-	logger.Infof("Merged %d chunks into single segment (%d docs, %d tokens)",
+	logger.Debugf("Merged %d chunks into single segment (%d docs, %d tokens)",
 		len(completeChunks), len(mergedDocs), len(mergedIndex))
 	return mergedSegment, nil
 }

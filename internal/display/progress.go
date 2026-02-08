@@ -131,8 +131,8 @@ func (pb *ProgressBar) Complete() {
 	close(pb.stopChan)
 	<-pb.doneChan
 
-	// Clear the progress line and show cursor
-	fmt.Print(clearLine + moveToStart + showCursor)
+	// Clear the progress line and show cursor, then move to next line
+	fmt.Print(clearLine + moveToStart + showCursor + "\n")
 }
 
 // render draws the single-line progress bar at current cursor position
