@@ -5,10 +5,12 @@ import (
 	"mneme/internal/core"
 	"mneme/internal/display"
 	"mneme/internal/logger"
+	"mneme/internal/platform"
 	"mneme/internal/query"
 	"mneme/internal/storage"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -33,6 +35,14 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	if !initialized {
 		logger.Error("Mneme is not initialized. Please run 'mneme init' first.")
 		return
+	}
+
+	// Check platform compatibility and show hint if mismatch
+	compatible, storedPlatform, err := storage.CheckPlatformCompatibility()
+	if err == nil && !compatible {
+		color.Yellow("⚠️  Index was created on '%s' but you're running on '%s'", storedPlatform, platform.Current())
+		color.Cyan("   Paths in the index may not resolve correctly.")
+		color.White("   Run 'mneme index' to re-index for this platform.\n")
 	}
 
 	if len(args) < 1 {

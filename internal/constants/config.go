@@ -1,8 +1,16 @@
 package constants
 
+import "mneme/internal/platform"
+
+var (
+	// DirPath is the data directory path (platform-aware)
+	DirPath = platform.GetDataDir()
+	// ConfigPath is the full config file path (platform-aware)
+	ConfigPath = platform.GetConfigPath()
+)
+
 const (
-	DirPath          = "~/.local/share/mneme"
-	ConfigPath       = "~/.config/mneme/mneme.toml"
 	AppName          = "mneme"
+	ConfigFileName   = "mneme.toml"
 	DefaultBatchSize = 20000
 )

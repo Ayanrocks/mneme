@@ -58,6 +58,26 @@ var BinaryExtensions = map[string]bool{
 	"swf": true, "fla": true, "blend": true, "fbx": true, "3ds": true, "max": true,
 	"unity": true, "unitypackage": true, "asset": true, "prefab": true,
 	"lock": true, "DS_Store": true, "localized": true, "map.js": true,
+
+	// Windows-specific file types
+	"lnk": true, "url": true, "scr": true, "sys": true, "drv": true,
+}
+
+// WindowsSystemFiles are specific filenames that should always be skipped
+// These are common Windows system/metadata files
+var WindowsSystemFiles = map[string]bool{
+	"desktop.ini":               true,
+	"thumbs.db":                 true,
+	"ntuser.dat":                true,
+	"ntuser.ini":                true,
+	"iconcache.db":              true,
+	"hiberfil.sys":              true,
+	"pagefile.sys":              true,
+	"swapfile.sys":              true,
+	"bootmgr":                   true,
+	"bootmgr.efi":               true,
+	"$recycle.bin":              true,
+	"system volume information": true,
 }
 
 // Crawler crawls the given path and returns a list of file paths

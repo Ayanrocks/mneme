@@ -10,6 +10,7 @@ import (
 	"mneme/internal/core"
 	"mneme/internal/core/pb"
 	"mneme/internal/logger"
+	"mneme/internal/platform"
 	"mneme/internal/utils"
 	"mneme/internal/version"
 	"os"
@@ -112,7 +113,8 @@ func readVersionFileInternal(dirPath string) (string, error) {
 }
 
 // ParseVersionFile parses the VERSION file content and extracts version information
-func ParseVersionFile(content string) (storageVersion string, cliVersion string, err error) {
+// Returns storageVersion, cliVersion, platformStr, error
+func ParseVersionFile(content string) (storageVersion string, cliVersion string, platformStr string, err error) {
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -126,14 +128,19 @@ func ParseVersionFile(content string) (storageVersion string, cliVersion string,
 			if len(parts) == 2 {
 				cliVersion = strings.TrimSpace(parts[1])
 			}
+		} else if strings.HasPrefix(line, "PLATFORM:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				platformStr = strings.TrimSpace(parts[1])
+			}
 		}
 	}
 
 	if storageVersion == "" {
-		return "", "", fmt.Errorf("STORAGE_VERSION not found in VERSION file")
+		return "", "", "", fmt.Errorf("STORAGE_VERSION not found in VERSION file")
 	}
 
-	return storageVersion, cliVersion, nil
+	return storageVersion, cliVersion, platformStr, nil
 }
 
 // IsVersionCompatible checks if the existing storage version is compatible with current version
@@ -156,7 +163,7 @@ func isVersionCompatibleInternal(dirPath string) (bool, error) {
 		return false, err
 	}
 
-	existingStorageVersion, existingCliVersion, err := ParseVersionFile(content)
+	existingStorageVersion, existingCliVersion, _, err := ParseVersionFile(content)
 	if err != nil {
 		logger.Errorf("Error parsing VERSION file: %+v", err)
 		return false, err
@@ -178,6 +185,32 @@ func isVersionCompatibleInternal(dirPath string) (bool, error) {
 	// In a real implementation, you might want to support version upgrades
 	logger.Warnf("Storage version mismatch: existing=%s, current=%s", existingStorageVersion, currentStorageVersion)
 	return false, nil
+}
+
+// CheckPlatformCompatibility reads the VERSION file and compares the stored platform
+// with the current platform. Returns whether they're compatible and the stored platform string.
+// This is used to warn users when running on a different OS than where the index was created.
+func CheckPlatformCompatibility() (isCompatible bool, storedPlatform string, err error) {
+	content, err := ReadVersionFile()
+	if err != nil {
+		// If VERSION file doesn't exist or can't be read, assume compatible (new install)
+		return true, "", nil
+	}
+
+	_, _, storedPlatform, err = ParseVersionFile(content)
+	if err != nil {
+		return true, "", nil
+	}
+
+	// If no platform was stored (older VERSION file), assume compatible
+	if storedPlatform == "" {
+		return true, "", nil
+	}
+
+	currentPlatform := platform.Current()
+	isCompatible = platform.IsPlatformCompatible(storedPlatform, currentPlatform)
+
+	return isCompatible, storedPlatform, nil
 }
 
 // ShouldInitialize determines if storage initialization is needed
@@ -397,7 +430,8 @@ func DirExists(path string) (bool, error) {
 func getVersionFileContents() string {
 	return fmt.Sprintf(`STORAGE_VERSION: %s
 MNEME_CLI_VERSION: %s
-`, version.MnemeStorageEngineVersion, version.MnemeVersion)
+PLATFORM: %s
+`, version.MnemeStorageEngineVersion, version.MnemeVersion, platform.Current())
 }
 
 // ReadFileContents reads and returns the contents of the file at the given path
