@@ -168,10 +168,24 @@ func TestParseVersionFile(t *testing.T) {
 STORAGE_VERSION: 1.0.0
 MNEME_CLI_VERSION: 1.0.0
 `
-		storageVersion, cliVersion, err := ParseVersionFile(content)
+		storageVersion, cliVersion, platformStr, err := ParseVersionFile(content)
 		require.NoError(t, err)
 		assert.Equal(t, "1.0.0", storageVersion)
 		assert.Equal(t, "1.0.0", cliVersion)
+		assert.Empty(t, platformStr) // No platform in this content
+	})
+
+	t.Run("parses version file with platform", func(t *testing.T) {
+		content := `
+STORAGE_VERSION: 1.0.0
+MNEME_CLI_VERSION: 1.0.0
+PLATFORM: linux
+`
+		storageVersion, cliVersion, platformStr, err := ParseVersionFile(content)
+		require.NoError(t, err)
+		assert.Equal(t, "1.0.0", storageVersion)
+		assert.Equal(t, "1.0.0", cliVersion)
+		assert.Equal(t, "linux", platformStr)
 	})
 
 	t.Run("parses version file with different versions", func(t *testing.T) {
@@ -179,7 +193,7 @@ MNEME_CLI_VERSION: 1.0.0
 STORAGE_VERSION: 2.1.0
 MNEME_CLI_VERSION: 3.2.1
 `
-		storageVersion, cliVersion, err := ParseVersionFile(content)
+		storageVersion, cliVersion, _, err := ParseVersionFile(content)
 		require.NoError(t, err)
 		assert.Equal(t, "2.1.0", storageVersion)
 		assert.Equal(t, "3.2.1", cliVersion)
@@ -189,14 +203,14 @@ MNEME_CLI_VERSION: 3.2.1
 		content := `
 MNEME_CLI_VERSION: 1.0.0
 `
-		_, _, err := ParseVersionFile(content)
+		_, _, _, err := ParseVersionFile(content)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "STORAGE_VERSION not found")
 	})
 
 	t.Run("handles empty content", func(t *testing.T) {
 		content := ""
-		_, _, err := ParseVersionFile(content)
+		_, _, _, err := ParseVersionFile(content)
 		assert.Error(t, err)
 	})
 
@@ -205,7 +219,7 @@ MNEME_CLI_VERSION: 1.0.0
 STORAGE_VERSION:   1.0.0  
 MNEME_CLI_VERSION:   1.0.0  
 `
-		storageVersion, cliVersion, err := ParseVersionFile(content)
+		storageVersion, cliVersion, _, err := ParseVersionFile(content)
 		require.NoError(t, err)
 		assert.Equal(t, "1.0.0", storageVersion)
 		assert.Equal(t, "1.0.0", cliVersion)
@@ -218,6 +232,7 @@ func TestGetVersionFileContents(t *testing.T) {
 
 		assert.Contains(t, content, "STORAGE_VERSION:")
 		assert.Contains(t, content, "MNEME_CLI_VERSION:")
+		assert.Contains(t, content, "PLATFORM:")
 	})
 
 	t.Run("content is not empty", func(t *testing.T) {
@@ -228,9 +243,10 @@ func TestGetVersionFileContents(t *testing.T) {
 	t.Run("can be parsed back", func(t *testing.T) {
 		content := getVersionFileContents()
 
-		storageVersion, cliVersion, err := ParseVersionFile(content)
+		storageVersion, cliVersion, platformStr, err := ParseVersionFile(content)
 		require.NoError(t, err)
 		assert.NotEmpty(t, storageVersion)
 		assert.NotEmpty(t, cliVersion)
+		assert.NotEmpty(t, platformStr)
 	})
 }

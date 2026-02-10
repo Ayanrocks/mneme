@@ -12,6 +12,7 @@ import (
 
 	"mneme/internal/core"
 	"mneme/internal/logger"
+	"mneme/internal/platform"
 )
 
 // PrettyPrintConfig displays the configuration in an intuitive bracket/tree format
@@ -120,7 +121,17 @@ func PrettyPrintConfig(configBytes []byte) error {
 }
 
 func ExpandFilePath(path string) (string, error) {
-	// Handle tilde expansion first
+	// Handle Windows drive letters (e.g., C:\Users\...) - already absolute
+	if platform.IsWindows() && len(path) >= 2 && path[1] == ':' {
+		return filepath.Abs(path)
+	}
+
+	// Handle UNC paths on Windows (e.g., \\server\share)
+	if platform.IsWindows() && strings.HasPrefix(path, "\\\\") {
+		return filepath.Abs(path)
+	}
+
+	// Handle tilde expansion (works on all platforms)
 	if len(path) > 0 && path[0] == '~' {
 		home, err := os.UserHomeDir()
 		if err != nil {

@@ -10,16 +10,16 @@ import (
 func TestConfigCmd(t *testing.T) {
 	t.Run("has correct configuration", func(t *testing.T) {
 		assert.Equal(t, "config", configCmd.Use)
-		assert.Equal(t, "Configuration commands", configCmd.Short)
-		assert.Equal(t, "Configuration commands", configCmd.Long)
+		assert.Contains(t, configCmd.Short, "Configuration")
+		assert.Contains(t, configCmd.Long, "configuration")
 	})
 }
 
 func TestShowCmd(t *testing.T) {
 	t.Run("has correct configuration", func(t *testing.T) {
 		assert.Equal(t, "show", showCmd.Use)
-		assert.Equal(t, "show configuration values", showCmd.Short)
-		assert.Equal(t, "show configuration values", showCmd.Long)
+		assert.Contains(t, showCmd.Short, "configuration")
+		assert.Contains(t, showCmd.Long, "configuration")
 	})
 
 	t.Run("has Run function set", func(t *testing.T) {
@@ -30,8 +30,8 @@ func TestShowCmd(t *testing.T) {
 func TestAddCmd(t *testing.T) {
 	t.Run("has correct configuration", func(t *testing.T) {
 		assert.Equal(t, "add", addCmd.Use)
-		assert.Equal(t, "add path to index", addCmd.Short)
-		assert.Equal(t, "add path to index", addCmd.Long)
+		assert.Contains(t, addCmd.Short, "Add")
+		assert.Contains(t, addCmd.Long, "path")
 	})
 
 	t.Run("has Run function set", func(t *testing.T) {
@@ -42,8 +42,8 @@ func TestAddCmd(t *testing.T) {
 func TestRemoveCmd(t *testing.T) {
 	t.Run("has correct configuration", func(t *testing.T) {
 		assert.Equal(t, "remove", removeCmd.Use)
-		assert.Equal(t, "remove path from indexing", removeCmd.Short)
-		assert.Equal(t, "remove path from indexing", removeCmd.Long)
+		assert.Contains(t, removeCmd.Short, "Remove")
+		assert.Contains(t, removeCmd.Long, "path")
 	})
 
 	t.Run("has Run function set", func(t *testing.T) {

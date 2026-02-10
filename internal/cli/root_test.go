@@ -42,8 +42,8 @@ func TestVersionCmd(t *testing.T) {
 func TestInitCmd(t *testing.T) {
 	t.Run("has correct configuration", func(t *testing.T) {
 		assert.Equal(t, "init", initCmd.Use)
-		assert.Contains(t, initCmd.Short, "Initializing")
-		assert.Contains(t, initCmd.Long, "Initializing")
+		assert.Contains(t, initCmd.Short, "Initialize")
+		assert.Contains(t, initCmd.Long, "setup")
 	})
 
 	t.Run("has Run function set", func(t *testing.T) {

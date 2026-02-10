@@ -1,6 +1,7 @@
 package constants
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -9,7 +10,8 @@ import (
 
 func TestDirPath(t *testing.T) {
 	t.Run("has expected format", func(t *testing.T) {
-		assert.True(t, strings.HasPrefix(DirPath, "~"))
+		// DirPath is now an absolute path from platform package
+		assert.True(t, filepath.IsAbs(DirPath), "DirPath should be absolute")
 		assert.Contains(t, DirPath, "mneme")
 	})
 
@@ -20,7 +22,8 @@ func TestDirPath(t *testing.T) {
 
 func TestConfigPath(t *testing.T) {
 	t.Run("has expected format", func(t *testing.T) {
-		assert.True(t, strings.HasPrefix(ConfigPath, "~"))
+		// ConfigPath is now an absolute path from platform package
+		assert.True(t, filepath.IsAbs(ConfigPath), "ConfigPath should be absolute")
 		assert.Contains(t, ConfigPath, "mneme")
 		assert.True(t, strings.HasSuffix(ConfigPath, ".toml"))
 	})

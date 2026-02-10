@@ -58,6 +58,26 @@ var BinaryExtensions = map[string]bool{
 	"swf": true, "fla": true, "blend": true, "fbx": true, "3ds": true, "max": true,
 	"unity": true, "unitypackage": true, "asset": true, "prefab": true,
 	"lock": true, "DS_Store": true, "localized": true, "map.js": true,
+
+	// Windows-specific file types
+	"lnk": true, "url": true, "scr": true, "sys": true, "drv": true,
+}
+
+// WindowsSystemFiles are specific filenames that should always be skipped
+// These are common Windows system/metadata files
+var WindowsSystemFiles = map[string]bool{
+	"desktop.ini":               true,
+	"thumbs.db":                 true,
+	"ntuser.dat":                true,
+	"ntuser.ini":                true,
+	"iconcache.db":              true,
+	"hiberfil.sys":              true,
+	"pagefile.sys":              true,
+	"swapfile.sys":              true,
+	"bootmgr":                   true,
+	"bootmgr.efi":               true,
+	"$recycle.bin":              true,
+	"system volume information": true,
 }
 
 // Crawler crawls the given path and returns a list of file paths
@@ -140,6 +160,12 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 		}
 
 		if entry.IsDir() {
+			// Check if this is a Windows system folder (case-insensitive)
+			if WindowsSystemFiles[strings.ToLower(entryName)] {
+				logger.Debugf("Skipping Windows system folder: %s", entryPath)
+				continue
+			}
+
 			// Check if this folder should be skipped
 			if skipFolderMap[entryName] {
 				logger.Debugf("Skipping folder: %s", entryPath)
@@ -185,6 +211,11 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 // shouldSkipFile checks if a file should be skipped based on options
 func shouldSkipFile(filePath string, options core.CrawlerOptions) bool {
 	fileName := filepath.Base(filePath)
+
+	// Check if file is a known Windows system file (case-insensitive)
+	if WindowsSystemFiles[strings.ToLower(fileName)] {
+		return true
+	}
 
 	// Check hidden files
 	if !options.IncludeHidden && strings.HasPrefix(fileName, ".") {
