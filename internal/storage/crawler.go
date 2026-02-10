@@ -160,6 +160,12 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 		}
 
 		if entry.IsDir() {
+			// Check if this is a Windows system folder (case-insensitive)
+			if WindowsSystemFiles[strings.ToLower(entryName)] {
+				logger.Debugf("Skipping Windows system folder: %s", entryPath)
+				continue
+			}
+
 			// Check if this folder should be skipped
 			if skipFolderMap[entryName] {
 				logger.Debugf("Skipping folder: %s", entryPath)
@@ -205,6 +211,11 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 // shouldSkipFile checks if a file should be skipped based on options
 func shouldSkipFile(filePath string, options core.CrawlerOptions) bool {
 	fileName := filepath.Base(filePath)
+
+	// Check if file is a known Windows system file (case-insensitive)
+	if WindowsSystemFiles[strings.ToLower(fileName)] {
+		return true
+	}
 
 	// Check hidden files
 	if !options.IncludeHidden && strings.HasPrefix(fileName, ".") {
