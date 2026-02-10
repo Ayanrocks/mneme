@@ -15,7 +15,7 @@ func GetDataDir() string {
 		// Fallback to user home + AppData/Local
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return `C:\mneme` // Last resort fallback
+			return filepath.Join(os.TempDir(), "mneme") // Last resort fallback
 		}
 		localAppData = filepath.Join(home, "AppData", "Local")
 	}
@@ -30,7 +30,7 @@ func GetConfigDir() string {
 		// Fallback to user home + AppData/Roaming
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return `C:\mneme` // Last resort fallback
+			return filepath.Join(os.TempDir(), "mneme") // Last resort fallback
 		}
 		appData = filepath.Join(home, "AppData", "Roaming")
 	}
