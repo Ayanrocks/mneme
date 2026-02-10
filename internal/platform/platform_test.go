@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+// TestCurrent verifies that Current returns a valid platform constant
+// matching the runtime OS.
 func TestCurrent(t *testing.T) {
 	current := Current()
 
@@ -40,6 +42,7 @@ func TestCurrent(t *testing.T) {
 	}
 }
 
+// TestIsWindows verifies that IsWindows reports true only on Windows.
 func TestIsWindows(t *testing.T) {
 	result := IsWindows()
 	expected := runtime.GOOS == "windows"
@@ -49,6 +52,7 @@ func TestIsWindows(t *testing.T) {
 	}
 }
 
+// TestIsUnix verifies that IsUnix reports true on non-Windows systems.
 func TestIsUnix(t *testing.T) {
 	result := IsUnix()
 	expected := runtime.GOOS != "windows"
@@ -58,6 +62,7 @@ func TestIsUnix(t *testing.T) {
 	}
 }
 
+// TestIsWSL verifies WSL detection based on environment and /proc/version.
 func TestIsWSL(t *testing.T) {
 	result := IsWSL()
 
@@ -72,6 +77,7 @@ func TestIsWSL(t *testing.T) {
 	}
 }
 
+// TestGetDataDir verifies that GetDataDir returns a non-empty path containing "mneme".
 func TestGetDataDir(t *testing.T) {
 	dir := GetDataDir()
 
@@ -85,6 +91,7 @@ func TestGetDataDir(t *testing.T) {
 	}
 }
 
+// TestGetConfigDir verifies that GetConfigDir returns a non-empty path containing "mneme".
 func TestGetConfigDir(t *testing.T) {
 	dir := GetConfigDir()
 
@@ -98,6 +105,7 @@ func TestGetConfigDir(t *testing.T) {
 	}
 }
 
+// TestGetConfigPath verifies that GetConfigPath returns a path ending with "mneme.toml".
 func TestGetConfigPath(t *testing.T) {
 	path := GetConfigPath()
 
@@ -111,6 +119,8 @@ func TestGetConfigPath(t *testing.T) {
 	}
 }
 
+// TestIsPlatformCompatible verifies platform compatibility checks using
+// a table of stored-vs-current platform pairs.
 func TestIsPlatformCompatible(t *testing.T) {
 	tests := []struct {
 		stored   string
