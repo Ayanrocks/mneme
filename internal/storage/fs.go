@@ -99,6 +99,7 @@ func readVersionFileInternal(dirPath string) (string, error) {
 
 	var content strings.Builder
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, constants.ScannerInitialBufSize), constants.ScannerMaxBufSize)
 	for scanner.Scan() {
 		content.WriteString(scanner.Text())
 		content.WriteString("\n")
@@ -451,6 +452,7 @@ func ReadFileContents(path string) ([]string, error) {
 
 	var lines []string
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, constants.ScannerInitialBufSize), constants.ScannerMaxBufSize)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}

@@ -18,7 +18,7 @@ var DefaultConfig = core.Config{
 	Version: 1,
 	Index: core.IndexConfig{
 		SegmentSize:          500,
-		MaxTokensPerDocument: 10000,
+		MaxTokensPerDocument: 0,
 		ReindexOnModify:      true,
 		SkipBinaryFiles:      true,
 	},

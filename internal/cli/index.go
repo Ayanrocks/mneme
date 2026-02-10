@@ -115,6 +115,7 @@ func indexCmdExecute(cmd *cobra.Command, args []string) {
 
 	// Use batch indexing to reduce memory usage
 	batchConfig := core.DefaultBatchConfig()
+	batchConfig.IndexConfig = config.Index
 
 	// Check if we should show progress bar (only when log level is "info")
 	if display.ShouldShowProgress() {

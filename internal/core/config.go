@@ -88,6 +88,7 @@ type BatchConfig struct {
 	BatchSize        int                                      // Number of files per batch (default: 20000)
 	ProgressCallback func(current, total int, message string) // Optional callback for progress updates
 	SuppressLogs     bool                                     // If true, suppress info logs (used when progress bar is active)
+	IndexConfig      IndexConfig                              // Index configuration (for MaxTokensPerDocument etc.)
 }
 
 // DefaultBatchConfig returns the default batch configuration

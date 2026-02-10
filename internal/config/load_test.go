@@ -34,7 +34,7 @@ func TestDefaultConfigWriter(t *testing.T) {
 
 		// Check index defaults
 		assert.Contains(t, configStr, "segment_size = 500")
-		assert.Contains(t, configStr, "max_tokens_per_document = 10000")
+		assert.Contains(t, configStr, "max_tokens_per_document = 0")
 		assert.Contains(t, configStr, "reindex_on_modify = true")
 		assert.Contains(t, configStr, "skip_binary_files = true")
 
@@ -75,7 +75,7 @@ func TestDefaultConfig(t *testing.T) {
 		config := DefaultConfig
 
 		assert.Equal(t, 500, config.Index.SegmentSize)
-		assert.Equal(t, 10000, config.Index.MaxTokensPerDocument)
+		assert.Equal(t, 0, config.Index.MaxTokensPerDocument)
 		assert.True(t, config.Index.ReindexOnModify)
 		assert.True(t, config.Index.SkipBinaryFiles)
 	})
@@ -190,7 +190,7 @@ func TestConfigFileOperations(t *testing.T) {
 			Version: 1,
 			Index: core.IndexConfig{
 				SegmentSize:          500,
-				MaxTokensPerDocument: 10000,
+				MaxTokensPerDocument: 0,
 				ReindexOnModify:      true,
 				SkipBinaryFiles:      true,
 			},

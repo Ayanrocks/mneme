@@ -12,7 +12,7 @@ func TestDefaultConfigStructure(t *testing.T) {
 			Version: 1,
 			Index: IndexConfig{
 				SegmentSize:          500,
-				MaxTokensPerDocument: 10000,
+				MaxTokensPerDocument: 0,
 				ReindexOnModify:      true,
 				SkipBinaryFiles:      true,
 			},
@@ -55,13 +55,13 @@ func TestIndexConfig(t *testing.T) {
 	t.Run("has correct default values", func(t *testing.T) {
 		config := IndexConfig{
 			SegmentSize:          500,
-			MaxTokensPerDocument: 10000,
+			MaxTokensPerDocument: 0,
 			ReindexOnModify:      true,
 			SkipBinaryFiles:      true,
 		}
 
 		assert.Equal(t, 500, config.SegmentSize)
-		assert.Equal(t, 10000, config.MaxTokensPerDocument)
+		assert.Equal(t, 0, config.MaxTokensPerDocument)
 		assert.True(t, config.ReindexOnModify)
 		assert.True(t, config.SkipBinaryFiles)
 	})
@@ -69,7 +69,7 @@ func TestIndexConfig(t *testing.T) {
 	t.Run("can be modified", func(t *testing.T) {
 		config := IndexConfig{
 			SegmentSize:          500,
-			MaxTokensPerDocument: 10000,
+			MaxTokensPerDocument: 0,
 			ReindexOnModify:      true,
 			SkipBinaryFiles:      true,
 		}
