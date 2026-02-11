@@ -197,9 +197,10 @@ func TestBenchmarkSuite(t *testing.T) {
 			term := keywords[rand.Intn(len(keywords))]
 			query.RankDocuments(segment, []string{term}, 10, rankingCfg)
 		}
-		res.SearchTime = time.Since(start) / time.Duration(numSearches)
+		searchTotal := time.Since(start)
+		res.SearchTime = searchTotal / time.Duration(numSearches)
 
-		res.TotalTime = res.CrawlTime + res.IndexTime + res.SearchTime // + genTime excluded
+		res.TotalTime = res.CrawlTime + res.IndexTime + searchTotal // + genTime excluded
 		results = append(results, res)
 	}
 
@@ -233,7 +234,7 @@ func printResultsTable(results []BenchmarkResult) {
 }
 
 func formatBytes(b int64) string {
-	const unit = 1000
+	const unit = 1024
 	if b < unit {
 		return fmt.Sprintf("%d B", b)
 	}
@@ -242,5 +243,5 @@ func formatBytes(b int64) string {
 		div *= unit
 		exp++
 	}
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGTPE"[exp])
+	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }
