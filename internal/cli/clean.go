@@ -1,14 +1,12 @@
 package cli
 
 import (
+	"mneme/internal/constants"
 	"mneme/internal/logger"
 	"mneme/internal/storage"
 
 	"github.com/spf13/cobra"
 )
-
-// TombstoneSizeThreshold is 100MB - above this we hint to run clean
-const TombstoneSizeThreshold = 100 * 1024 * 1024
 
 var cleanCmd = &cobra.Command{
 	Use:   "clean",
@@ -67,7 +65,7 @@ func CheckTombstonesAndHint() {
 		return
 	}
 
-	if size > TombstoneSizeThreshold {
+	if size > constants.TombstoneSizeThreshold {
 		logger.Print("")
 		logger.Print("💡 Tombstones folder is using %s. Run 'mneme clean' to free up space.", storage.FormatBytes(size))
 	}

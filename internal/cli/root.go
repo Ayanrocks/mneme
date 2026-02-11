@@ -35,7 +35,7 @@ var rootCmd = &cobra.Command{
 	Long: `Mneme is a powerful search engine for your personal documents, code repositories, and notes.
 It allows you to index and search through your local files with ease, providing fast and relevant results.`,
 
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize logger after flags are parsed, with log level from config
 		logLevel := getLogLevelFromConfig()
 		logger.Init(verbose, quiet, false, logLevel)

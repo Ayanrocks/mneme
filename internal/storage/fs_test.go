@@ -250,3 +250,45 @@ func TestGetVersionFileContents(t *testing.T) {
 		assert.NotEmpty(t, platformStr)
 	})
 }
+
+func TestReadFileContents(t *testing.T) {
+	t.Run("reads normal file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		testPath := filepath.Join(tempDir, "test.txt")
+
+		err := os.WriteFile(testPath, []byte("line1\nline2\nline3"), 0644)
+		require.NoError(t, err)
+
+		lines, err := ReadFileContents(testPath)
+		require.NoError(t, err)
+		assert.Len(t, lines, 3)
+		assert.Equal(t, "line1", lines[0])
+		assert.Equal(t, "line2", lines[1])
+		assert.Equal(t, "line3", lines[2])
+	})
+
+	t.Run("reads file with very long line exceeding 64KB", func(t *testing.T) {
+		tempDir := t.TempDir()
+		testPath := filepath.Join(tempDir, "large_line.json")
+
+		// Create a line longer than 64KB (bufio.Scanner default max token size)
+		longLine := make([]byte, 100*1024) // 100KB
+		for i := range longLine {
+			longLine[i] = 'a'
+		}
+
+		err := os.WriteFile(testPath, longLine, 0644)
+		require.NoError(t, err)
+
+		lines, err := ReadFileContents(testPath)
+		require.NoError(t, err, "should not fail with token too long error")
+		assert.Len(t, lines, 1)
+		assert.Len(t, lines[0], 100*1024)
+	})
+
+	t.Run("returns error for non-existent file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		_, err := ReadFileContents(filepath.Join(tempDir, "nonexistent.txt"))
+		assert.Error(t, err)
+	})
+}

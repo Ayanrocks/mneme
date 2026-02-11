@@ -17,8 +17,8 @@ func TestRootCmd(t *testing.T) {
 		assert.Contains(t, rootCmd.Long, "powerful search engine")
 	})
 
-	t.Run("has PreRun hook set", func(t *testing.T) {
-		assert.NotNil(t, rootCmd.PreRun)
+	t.Run("has PersistentPreRun hook set", func(t *testing.T) {
+		assert.NotNil(t, rootCmd.PersistentPreRun)
 	})
 
 	t.Run("has Run function set", func(t *testing.T) {

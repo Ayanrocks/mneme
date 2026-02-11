@@ -135,7 +135,7 @@ func IndexBuilderBatched(paths []string, crawlerOptions *core.CrawlerOptions, co
 		}
 
 		// Process this batch
-		chunk, docCount, tokenCount := processBatch(batchFiles, &globalDocID)
+		chunk, docCount, tokenCount := processBatch(batchFiles, &globalDocID, config.IndexConfig.MaxTokensPerDocument)
 
 		// Add chunk info to manifest (marked as in_progress)
 		chunkInfo := core.ChunkInfo{
@@ -236,7 +236,7 @@ func IndexBuilderBatchedWithRegistry(registry *ingest.Registry, crawlerOptions *
 		}
 
 		// Process this batch using the registry
-		chunk, docCount, tokenCount := processBatchWithRegistry(batchDocIDs, registry, &globalDocID)
+		chunk, docCount, tokenCount := processBatchWithRegistry(batchDocIDs, registry, &globalDocID, config.IndexConfig.MaxTokensPerDocument)
 
 		// Add chunk info to manifest (marked as in_progress)
 		chunkInfo := core.ChunkInfo{
@@ -288,7 +288,7 @@ func IndexBuilderBatchedWithRegistry(registry *ingest.Registry, crawlerOptions *
 }
 
 // processBatch processes a batch of files and returns a segment chunk
-func processBatch(files []string, globalDocID *uint) (*core.Segment, uint, uint) {
+func processBatch(files []string, globalDocID *uint, maxTokensPerDocument int) (*core.Segment, uint, uint) {
 	tokenFrequency := make(map[string]uint)
 	invertedIndex := make(map[string][]core.Posting)
 	docs := make([]core.Document, 0, len(files))
@@ -309,6 +309,12 @@ func processBatch(files []string, globalDocID *uint) (*core.Segment, uint, uint)
 			for _, token := range tokens {
 				tokenFrequency[token]++
 			}
+		}
+
+		// Skip file if token count exceeds max (when max > 0)
+		if maxTokensPerDocument > 0 && len(tokenFrequency) > maxTokensPerDocument {
+			logger.Debugf("Skipping file %s: token count %d exceeds max %d", filePath, len(tokenFrequency), maxTokensPerDocument)
+			continue
 		}
 
 		// Build inverted index for this document
@@ -355,7 +361,7 @@ func formatChunkFilename(chunkID int) string {
 }
 
 // processBatchWithRegistry processes a batch of document IDs using the ingestor registry
-func processBatchWithRegistry(docIDs []string, registry *ingest.Registry, globalDocID *uint) (*core.Segment, uint, uint) {
+func processBatchWithRegistry(docIDs []string, registry *ingest.Registry, globalDocID *uint, maxTokensPerDocument int) (*core.Segment, uint, uint) {
 	tokenFrequency := make(map[string]uint)
 	invertedIndex := make(map[string][]core.Posting)
 	docs := make([]core.Document, 0, len(docIDs))
@@ -377,6 +383,12 @@ func processBatchWithRegistry(docIDs []string, registry *ingest.Registry, global
 			for _, token := range tokens {
 				tokenFrequency[token]++
 			}
+		}
+
+		// Skip document if token count exceeds max (when max > 0)
+		if maxTokensPerDocument > 0 && len(tokenFrequency) > maxTokensPerDocument {
+			logger.Debugf("Skipping document %s: token count %d exceeds max %d", docID, len(tokenFrequency), maxTokensPerDocument)
+			continue
 		}
 
 		// Build inverted index for this document

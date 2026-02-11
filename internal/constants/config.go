@@ -12,5 +12,5 @@ var (
 const (
 	AppName          = "mneme"
 	ConfigFileName   = "mneme.toml"
-	DefaultBatchSize = 20000
+	
 )
