@@ -65,7 +65,7 @@ test-bench:
 .PHONY: benchmarks
 benchmarks:
 	@echo "Running Mneme Benchmarks..."
-	$(GO) test -v -tags benchmark -run TestBenchmarkSuite -timeout 20m ./internal/benchmark/
+	$(GO) test -v -tags benchmark -run TestBenchmarkSuite -count=1 -timeout 20m ./internal/benchmark/
 	@echo ""
 
 .PHONY: test-coverage

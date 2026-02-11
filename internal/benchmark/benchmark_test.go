@@ -94,10 +94,12 @@ func TestBenchmarkSuite(t *testing.T) {
 	sizes := []int{100, 500, 1000, 5000}
 	results := make([]BenchmarkResult, 0, len(sizes))
 
-	// Save original DirPath to restore after tests
+	// Save original DirPath and ConfigPath to restore after tests
 	originalDirPath := constants.DirPath
+	originalConfigPath := constants.ConfigPath
 	defer func() {
 		constants.DirPath = originalDirPath
+		constants.ConfigPath = originalConfigPath
 	}()
 
 	fmt.Println("\nRunning Mneme Benchmarks...")
@@ -111,8 +113,9 @@ func TestBenchmarkSuite(t *testing.T) {
 		corpusDir := filepath.Join(tempDir, "corpus")
 		dataDir := filepath.Join(tempDir, "data")
 
-		// Override constants.DirPath to use our temp data directory
+		// Override constants.DirPath and ConfigPath to use our temp data directory
 		constants.DirPath = dataDir
+		constants.ConfigPath = filepath.Join(tempDir, "config")
 
 		// Initialize storage (creates segments dir etc)
 		err := storage.InitMnemeStorage()
@@ -163,12 +166,14 @@ func TestBenchmarkSuite(t *testing.T) {
 		// Approximate Read Speed (MB/s) - using total index size (approx)
 		// We can get actual size from checking file sizes in segments dir
 		var indexSize int64
-		filepath.Walk(filepath.Join(dataDir, "segments"), func(_ string, info os.FileInfo, _ error) error {
+		err = filepath.Walk(filepath.Join(dataDir, "segments"), func(_ string, info os.FileInfo, _ error) error {
 			if info != nil && !info.IsDir() {
 				indexSize += info.Size()
 			}
 			return nil
 		})
+		require.NoError(t, err, "failed to walk segments directory")
+
 		res.ReadSpeed = float64(indexSize) / 1024 / 1024 / loadTime.Seconds()
 
 		// Approximate Write Speed (MB/s) - using index size / index time (conservative)
