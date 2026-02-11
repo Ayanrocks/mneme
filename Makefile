@@ -62,6 +62,12 @@ test-bench:
 	@echo "Benchmark results saved to cpu.prof and mem.prof"
 	@echo ""
 
+.PHONY: benchmarks
+benchmarks:
+	@echo "Running Mneme Benchmarks..."
+	$(GO) test -v -tags benchmark -run TestBenchmarkSuite -timeout 20m ./internal/benchmark/
+	@echo ""
+
 .PHONY: test-coverage
 test-coverage:
 	@echo "Running tests with coverage..."
