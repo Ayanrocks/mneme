@@ -287,7 +287,8 @@ func TestReadFileContents(t *testing.T) {
 	})
 
 	t.Run("returns error for non-existent file", func(t *testing.T) {
-		_, err := ReadFileContents("/nonexistent/path/file.txt")
+		tempDir := t.TempDir()
+		_, err := ReadFileContents(filepath.Join(tempDir, "nonexistent.txt"))
 		assert.Error(t, err)
 	})
 }

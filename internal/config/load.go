@@ -18,7 +18,7 @@ var DefaultConfig = core.Config{
 	Version: 1,
 	Index: core.IndexConfig{
 		SegmentSize:          500,
-		MaxTokensPerDocument: 0,
+		MaxTokensPerDocument: 0, // 0 disables the per-document token limit
 		ReindexOnModify:      true,
 		SkipBinaryFiles:      true,
 	},
