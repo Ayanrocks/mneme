@@ -57,7 +57,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	// get query from args
-	queryString := strings.Join(args, " "``)
+	queryString := strings.Join(args, " ")
 
 	// Get stemmed tokens for BM25 ranking
 	queryTokens := query.ParseQuery(queryString)
