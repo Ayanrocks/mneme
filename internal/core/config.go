@@ -25,10 +25,6 @@ type SourcesConfig struct {
 	ExcludeExtensions []string               `toml:"exclude_extensions"`
 	Ignore            []string               `toml:"ignore"`
 	Filesystem        FilesystemSourceConfig `toml:"filesystem"`
-	// Future sources - uncomment when implementing
-	// OneDrive OneDriveSourceConfig `toml:"onedrive"`
-	// GDrive   GDriveSourceConfig   `toml:"gdrive"`
-	// GitHub   GitHubSourceConfig   `toml:"github"`
 }
 
 // FilesystemSourceConfig holds configuration for local filesystem source.
@@ -41,24 +37,6 @@ type FilesystemSourceConfig struct {
 // IsEnabled returns true if the source is explicitly enabled OR if paths are provided.
 func (f *FilesystemSourceConfig) IsEnabled(paths []string) bool {
 	return f.Enabled || len(paths) > 0
-}
-
-// OneDriveSourceConfig placeholder for future OneDrive integration.
-type OneDriveSourceConfig struct {
-	Enabled  bool   `toml:"enabled"`
-	LoginKey string `toml:"login_key"`
-}
-
-// GDriveSourceConfig placeholder for future Google Drive integration.
-type GDriveSourceConfig struct {
-	Enabled bool `toml:"enabled"`
-}
-
-// GitHubSourceConfig placeholder for future GitHub integration.
-type GitHubSourceConfig struct {
-	Enabled bool     `toml:"enabled"`
-	Token   string   `toml:"token"`
-	Repos   []string `toml:"repos"`
 }
 
 type WatcherConfig struct {

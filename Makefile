@@ -21,7 +21,9 @@ help:
 	@echo "  make test          - Run all tests with coverage"
 	@echo "  make test-short    - Run tests without race detector"
 	@echo "  make test-verbose  - Run tests with verbose output"
-	@echo "  make test-bench    - Run benchmarks"
+	@echo "  make test-verbose  - Run tests with verbose output"
+	@echo "  make benchmarks    - Run benchmarks"
+	@echo "  make test-bench    - Run benchmarks (profiling)"
 	@echo "  make test-coverage - Generate HTML coverage report"
 	@echo "  make test-clean    - Clean test artifacts"
 	@echo "  make build         - Build the project"
@@ -60,6 +62,12 @@ test-bench:
 	@echo "Running benchmarks..."
 	$(GO) test $(GOFLAGS) $(BENCHFLAGS) ./...
 	@echo "Benchmark results saved to cpu.prof and mem.prof"
+	@echo ""
+
+.PHONY: benchmarks
+benchmarks:
+	@echo "Running Mneme Benchmarks..."
+	$(GO) test $(GOFLAGS) -v -tags benchmark -run TestBenchmarkSuite -count=1 -timeout 20m ./internal/benchmark/
 	@echo ""
 
 .PHONY: test-coverage

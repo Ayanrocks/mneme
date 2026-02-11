@@ -50,6 +50,9 @@ make test-verbose
 # Run benchmarks
 make test-bench
 
+# Run custom performance benchmarks (table output)
+make benchmarks
+
 # Generate HTML coverage report
 make test-coverage
 
