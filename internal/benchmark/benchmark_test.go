@@ -12,6 +12,7 @@ import (
 	"mneme/internal/storage"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,7 +57,7 @@ func generateTestCorpus(t *testing.T, dir string, numFiles int) int64 {
 
 		// varied content length: 50 to 200 lines
 		numLines := 50 + rand.Intn(150)
-		var content string
+		var b strings.Builder
 
 		for j := 0; j < numLines; j++ {
 			// Randomly indentation
@@ -77,9 +78,11 @@ func generateTestCorpus(t *testing.T, dir string, numFiles int) int64 {
 					line += fmt.Sprintf("ident_%d ", rand.Intn(1000))
 				}
 			}
-			content += line + "\n"
+			b.WriteString(line)
+			b.WriteByte('\n')
 		}
 
+		content := b.String()
 		err := os.WriteFile(path, []byte(content), 0644)
 		require.NoError(t, err)
 
