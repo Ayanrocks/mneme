@@ -124,8 +124,22 @@ Crawls your configured paths and builds/updates the search index.
     - `-q, --quiet`: Only show errors.
 
 ### `mneme find <query>`
-Searches the index for the given query phrase.
-- **Example**: `mneme find "deploy production"`
+Searches the index for the given query.
+
+**Phrase search** — wrap words in quotes to match an exact phrase:
+```bash
+mneme find "aws region"          # matches the exact phrase "aws region"
+```
+
+**Mixed search** — combine phrases and individual words:
+```bash
+mneme find "error handling" go   # matches phrase "error handling" AND word "go"
+```
+
+**Individual words** — unquoted words are matched independently:
+```bash
+mneme find deploy production     # matches documents with "deploy" or "production"
+```
 
 ### `mneme clean`
 Manages the storage engine.
