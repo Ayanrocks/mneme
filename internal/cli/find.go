@@ -19,6 +19,7 @@ var findCmd = &cobra.Command{
 	Short: "Find documents",
 	Long: `Find documents matching the given query, showing relevant snippets.
 Results are ranked by relevance using BM25 and Vector Space Model algorithms.
+Fuzzy matching is automatically applied to catch typos and near-matches.
 
 Use quotes to search for exact phrases:
   mneme find "aws region"       → matches the exact phrase "aws region"
@@ -140,6 +141,14 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		// This filters out false positives from BM25 stemming
 		if len(result.Snippets) > 0 {
 			results = append(results, result)
+		} else {
+			// Fallback: if raw search terms didn't match (e.g., typo like "FnidQueryToken"),
+			// retry snippet matching with individual stemmed tokens which may have been
+			// fuzzy-corrected (e.g., "fnid" → "find" in the index)
+			result, err = display.FormatSearchResult(doc.Path, stemmedTokens, doc.Score)
+			if err == nil && len(result.Snippets) > 0 {
+				results = append(results, result)
+			}
 		}
 	}
 

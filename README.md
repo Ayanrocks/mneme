@@ -22,6 +22,7 @@ Whether you have thousands of markdown notes, a vast library of PDF documents, o
 
 - **🚀 Blazing Fast Indexing**: Utilizes LSM-tree inspired batch processing to handle large datasets with minimal memory footprint.
 - **🧠 Smart Ranking**: Implements **BM25** and **Vector Space Model (VSM)** algorithms to surface the most relevant results, not just keyword matches.
+- **🔮 Fuzzy Search**: Tolerates typos and misspellings using **Trigram Indexing + Levenshtein Distance** — so `"kuberntes"` still finds `"kubernetes"`.
 - **🔍 Content Awareness**: 
     - Automatically detects and skips binary files (images, videos, executables).
     - Supports pluggable ingestors for future expansion (e.g., Google Drive, GitHub).
@@ -125,6 +126,12 @@ Crawls your configured paths and builds/updates the search index.
 
 ### `mneme find <query>`
 Searches the index for the given query.
+
+**Fuzzy search** — automatically catches typos and near-matches:
+```bash
+mneme find "deplyment"           # still finds "deployment"
+mneme find "kuberntes config"    # still finds "kubernetes" + "config"
+```
 
 **Phrase search** — wrap words in quotes to match an exact phrase:
 ```bash
