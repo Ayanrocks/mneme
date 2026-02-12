@@ -9,8 +9,7 @@ import (
 // ParseQuery tokenizes a query string into stemmed tokens for BM25/VSM scoring.
 // This is a convenience wrapper that maintains backward compatibility.
 func ParseQuery(queryString string) []string {
-	logger.Info("Query string: " + queryString)
-
+	logger.Info("Tokenizing query")
 	// Use the same tokenization pipeline as indexing for BM25 consistency
 	tokens := index.TokenizeQuery(queryString)
 
