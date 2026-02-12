@@ -18,7 +18,12 @@ var findCmd = &cobra.Command{
 	Use:   "find",
 	Short: "Find documents",
 	Long: `Find documents matching the given query, showing relevant snippets.
-Results are ranked by relevance using BM25 and Vector Space Model algorithms.`,
+Results are ranked by relevance using BM25 and Vector Space Model algorithms.
+
+Use quotes to search for exact phrases:
+  mneme find "aws region"       → matches the exact phrase "aws region"
+  mneme find deploy production  → matches documents containing "deploy" or "production"
+  mneme find "error handling" go → matches the phrase "error handling" and the word "go"`,
 	Example: `  mneme find "machine learning"
   mneme find python tutorial
   mneme find "error handling" in go`,
@@ -46,7 +51,16 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	}
 
 	if len(args) < 1 {
-		logger.PrintError("Please provide a query to search for.")
+		logger.PrintError("Please provide a search query. Example: mneme find \"your query\"")
+		return
+	}
+
+	// Build the raw query string from args
+	queryString := strings.Join(args, " ")
+	queryString = strings.TrimSpace(queryString)
+
+	if queryString == "" {
+		logger.PrintError("Search query cannot be empty. Example: mneme find \"your query\"")
 		return
 	}
 
@@ -56,11 +70,22 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// get query from args
-	queryString := strings.Join(args, " ")
+	// Use args directly as search terms.
+	// The shell already handles quote parsing:
+	//   mneme find "aws region"     → args = ["aws region"]  (one phrase)
+	//   mneme find deploy prod      → args = ["deploy", "prod"] (two words)
+	//   mneme find "error handling" go → args = ["error handling", "go"]
+	// Multi-word args (containing spaces) were quoted by the user = phrase search.
+	// Single-word args are individual token matches.
+	searchTerms := args
 
-	// Get stemmed tokens for BM25 ranking
-	queryTokens := query.ParseQuery(queryString)
+	// Build stemmed tokens for BM25/VSM by splitting all terms into individual words
+	stemmedTokens := query.ParseQuery(queryString)
+
+	if len(stemmedTokens) == 0 {
+		logger.PrintError("No valid search tokens found in query: %s", queryString)
+		return
+	}
 
 	// Check if we should show progress bar
 	var segmentIndex *core.Segment
@@ -75,25 +100,25 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		segmentIndex, err = storage.LoadSegmentIndex()
 		if err != nil {
 			pb.Complete()
-			logger.Errorf("Failed to load segment index: %+v", err)
+			logger.PrintError("No index found. Please run 'mneme index' to build the search index first.")
 			return
 		}
 
 		pb.SetMessage("Ranking documents...")
 		// Get ranked documents with scores
-		rankedDocs = query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit, &config.Ranking)
+		rankedDocs = query.RankDocuments(segmentIndex, stemmedTokens, config.Search.DefaultLimit, &config.Ranking)
 		pb.Complete()
 	} else {
 		// No progress bar - regular logging
 		// Read segments index from the file system
 		segmentIndex, err = storage.LoadSegmentIndex()
 		if err != nil {
-			logger.Errorf("Failed to load segment index: %+v", err)
+			logger.PrintError("No index found. Please run 'mneme index' to build the search index first.")
 			return
 		}
 
 		// Get ranked documents with scores
-		rankedDocs = query.RankDocuments(segmentIndex, queryTokens, config.Search.DefaultLimit, &config.Ranking)
+		rankedDocs = query.RankDocuments(segmentIndex, stemmedTokens, config.Search.DefaultLimit, &config.Ranking)
 	}
 
 	if len(rankedDocs) == 0 {
@@ -101,13 +126,11 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Extract original query words (not stemmed) for snippet matching
-	originalQueryWords := strings.Fields(queryString)
-
-	// Build search results with snippets - only include results with actual matches
+	// Use searchTerms (which preserve quoted phrases) for snippet matching
+	// This ensures "aws region" is matched as an exact phrase in document lines
 	var results []*core.SearchResult
 	for _, doc := range rankedDocs {
-		result, err := display.FormatSearchResult(doc.Path, originalQueryWords, doc.Score)
+		result, err := display.FormatSearchResult(doc.Path, searchTerms, doc.Score)
 		if err != nil {
 			logger.Debugf("Failed to format result for %s: %v", doc.Path, err)
 			continue

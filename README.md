@@ -7,7 +7,7 @@
 
   [![Go Report Card](https://goreportcard.com/badge/github.com/ayanrocks/mneme)](https://goreportcard.com/report/github.com/ayanrocks/mneme)
   ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-  ![Version](https://img.shields.io/badge/version-0.2.0-green.svg)
+  ![Version](https://img.shields.io/badge/version-0.5.0-green.svg)
 </div>
 
 ---
@@ -124,8 +124,22 @@ Crawls your configured paths and builds/updates the search index.
     - `-q, --quiet`: Only show errors.
 
 ### `mneme find <query>`
-Searches the index for the given query phrase.
-- **Example**: `mneme find "deploy production"`
+Searches the index for the given query.
+
+**Phrase search** — wrap words in quotes to match an exact phrase:
+```bash
+mneme find "aws region"          # matches the exact phrase "aws region"
+```
+
+**Mixed search** — combine phrases and individual words:
+```bash
+mneme find "error handling" go   # matches phrase "error handling" AND word "go"
+```
+
+**Individual words** — unquoted words are matched independently:
+```bash
+mneme find deploy production     # matches documents with "deploy" or "production"
+```
 
 ### `mneme clean`
 Manages the storage engine.
