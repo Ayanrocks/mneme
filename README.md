@@ -7,7 +7,7 @@
 
   [![Go Report Card](https://goreportcard.com/badge/github.com/ayanrocks/mneme)](https://goreportcard.com/report/github.com/ayanrocks/mneme)
   ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-  ![Version](https://img.shields.io/badge/version-0.5.0-green.svg)
+  ![Version](https://img.shields.io/badge/version-0.6.0-green.svg)
 </div>
 
 ---
