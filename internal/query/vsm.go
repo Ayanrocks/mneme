@@ -120,21 +120,28 @@ func CalculateCosineSimilarity(vec1, vec2 *core.TFIDFVector) float64 {
 // CalculateVSMScores computes VSM cosine similarity scores for all documents
 // that have at least one query term
 func CalculateVSMScores(segment *core.Segment, tokens []string) map[uint]float64 {
-	scores := make(map[uint]float64)
-
 	if segment == nil || len(tokens) == 0 {
-		return scores
+		return make(map[uint]float64)
 	}
 
 	// Build query vector
 	queryVector := BuildQueryTFIDFVector(segment, tokens)
-	if queryVector.Norm == 0 {
+	return CalculateVSMScoresWithGlobalNorm(segment, queryVector, tokens)
+}
+
+// CalculateVSMScoresWithGlobalNorm computes VSM scores using a pre-calculated global query vector
+// (defining weights and the global norm) but only scanning for documents containing scanTokens.
+// This allows parallel execution where scanTokens is a subset of the global query.
+func CalculateVSMScoresWithGlobalNorm(segment *core.Segment, globalQueryVector *core.TFIDFVector, scanTokens []string) map[uint]float64 {
+	scores := make(map[uint]float64)
+
+	if segment == nil || len(scanTokens) == 0 || globalQueryVector == nil || globalQueryVector.Norm == 0 {
 		return scores
 	}
 
-	// Find all documents that contain at least one query term
+	// Find all documents that contain at least one query term from scanTokens
 	candidateDocs := make(map[uint]bool)
-	for _, token := range tokens {
+	for _, token := range scanTokens {
 		postings, exists := segment.InvertedIndex[token]
 		if !exists {
 			continue
@@ -146,8 +153,9 @@ func CalculateVSMScores(segment *core.Segment, tokens []string) map[uint]float64
 
 	// Calculate VSM score for each candidate document
 	for docID := range candidateDocs {
-		docVector := BuildDocumentTFIDFVector(segment, docID, tokens)
-		similarity := CalculateCosineSimilarity(queryVector, docVector)
+		// Calculate document vector using scanTokens
+		docVector := BuildDocumentTFIDFVector(segment, docID, scanTokens)
+		similarity := CalculateCosineSimilarity(globalQueryVector, docVector)
 		scores[docID] = similarity
 	}
 

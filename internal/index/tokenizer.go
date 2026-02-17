@@ -129,6 +129,25 @@ func tokenizeCode(content string) []string {
 func processIdentifier(identifier string) []string {
 	var result []string
 
+	// First, if the identifier itself is a valid token (and not just a mash of words),
+	// add it to the result. This enables fuzzy matching against the full identifier
+	// (e.g. "MixedCaseIdentifier" -> "mixedcaseidentifier").
+	// We only do this if it's not snake_case (which is already handled by parts splitting)
+	// and doesn't contain underscores.
+	if !strings.Contains(identifier, "_") {
+		lowerID := strings.ToLower(identifier)
+		if len(lowerID) > 2 && !isNumeric(lowerID) {
+			// Stem it? Maybe not. Identifiers are often unique enough.
+			// But consistency suggests stemming.
+			stemmed := strings.ToLower(stemmer.Stem(lowerID))
+			if stemmed != "" && len(stemmed) >= 2 {
+				result = append(result, stemmed)
+			} else {
+				result = append(result, lowerID)
+			}
+		}
+	}
+
 	// First, split by underscores (snake_case)
 	parts := strings.Split(identifier, "_")
 
@@ -252,8 +271,58 @@ func extractJSONTokens(data interface{}, tokens *[]string) {
 	}
 }
 
-// TokenizeQuery tokenizes a search query using the same pipeline as indexing.
-// This ensures query tokens match indexed tokens for accurate BM25 scoring.
+// TokenizeQuery tokenizes a search query into tokens for BM25/VSM scoring.
+// Unlike TokenizeContent (used for indexing), this does NOT split camelCase
+// identifiers. This is intentional: the index stores both the full compound
+// form (e.g. "findquerytoken") and its parts ("find", "queri", "token").
+// By searching with the full form, compound identifiers match precisely
+// and fuzzy search can correct typos (e.g. "fnidquerytoken" → "findquerytoken").
+// Snake_case IS split (underscores are word separators), matching index behavior.
 func TokenizeQuery(query string) []string {
-	return TokenizeContent(query)
+	var tokens []string
+
+	// Extract words: letters and digits are part of words.
+	// Underscores, spaces, and punctuation are word separators.
+	// This splits snake_case but preserves camelCase.
+	var currentWord strings.Builder
+	for _, r := range query {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			currentWord.WriteRune(r)
+		} else {
+			if currentWord.Len() > 0 {
+				tokens = append(tokens, processQueryWord(currentWord.String()))
+				currentWord.Reset()
+			}
+		}
+	}
+	// Don't forget the last word
+	if currentWord.Len() > 0 {
+		tokens = append(tokens, processQueryWord(currentWord.String()))
+	}
+
+	// Filter empty tokens and stopwords
+	var filtered []string
+	for _, t := range tokens {
+		if t != "" {
+			filtered = append(filtered, t)
+		}
+	}
+	return FilterStopwords(filtered)
+}
+
+// processQueryWord lowercases and stems a single query word without splitting camelCase.
+func processQueryWord(word string) string {
+	token := strings.ToLower(word)
+
+	// Skip very short tokens and purely numeric tokens
+	if len(token) < 2 || isNumeric(token) {
+		return ""
+	}
+
+	// Apply stemming for consistency with the index
+	stemmed := strings.ToLower(stemmer.Stem(token))
+	if stemmed != "" && len(stemmed) >= 2 {
+		return stemmed
+	}
+	return token
 }

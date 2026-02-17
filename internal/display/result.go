@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -44,20 +45,86 @@ func FormatSearchResult(docPath string, queryTokens []string, score float64) (*c
 		Snippets: []core.Snippet{},
 	}
 
-	// Find matching lines
-	matchCount := 0
+	type matchLine struct {
+		lineNum     int
+		line        string
+		matches     []core.HighlightRange
+		score       int // score based on unique terms + total matches
+		uniqueTerms int
+	}
+
+	var candidates []matchLine
+	totalMatches := 0
+
+	// Find all matching lines
 	for lineNum, line := range lines {
 		matches := findMatchesInLine(line, queryTokens)
 		if len(matches) > 0 {
-			matchCount += len(matches)
-			if len(result.Snippets) < MaxSnippetsPerResult {
-				snippet := createSnippet(lineNum+1, line, matches)
-				result.Snippets = append(result.Snippets, snippet)
+			totalMatches += len(matches)
+
+			// Calculate score:
+			// 1. Calculate unique terms matched in this line
+			// 2. Score = (UniqueTerms * 100) + (TotalMatches)
+			// This heavily prioritizes lines matching multiple different terms (e.g. "find" AND "token")
+			// over lines matching the same term multiple times.
+
+			matchedTerms := make(map[string]bool)
+			lineLower := strings.ToLower(line)
+			for _, token := range queryTokens {
+				if len(token) > 0 && strings.Contains(lineLower, strings.ToLower(token)) {
+					matchedTerms[token] = true
+				}
+			}
+			uniqueCount := len(matchedTerms)
+			lineScore := (uniqueCount * 100) + len(matches)
+
+			candidates = append(candidates, matchLine{
+				lineNum:     lineNum + 1,
+				line:        line,
+				matches:     matches,
+				score:       lineScore,
+				uniqueTerms: uniqueCount,
+			})
+		}
+	}
+
+	// Sort candidates by score descending
+	// Use a stable sort to preserve line order for ties? No, we want score.
+	// We can implement a simple sort.
+	for i := 0; i < len(candidates)-1; i++ {
+		for j := i + 1; j < len(candidates); j++ {
+			if candidates[j].score > candidates[i].score {
+				candidates[i], candidates[j] = candidates[j], candidates[i]
 			}
 		}
 	}
 
-	result.MatchCount = matchCount
+	// Select top snippets, but try to respect original line order if scores are somewhat close?
+	// For now, simpler is better: Top scores win.
+	// But we might want to re-sort by line number for display?
+	// Usually snippets are shown in file order.
+
+	topCandidates := candidates
+	if len(topCandidates) > MaxSnippetsPerResult {
+		topCandidates = topCandidates[:MaxSnippetsPerResult]
+	}
+
+	// Re-sort selected snippets by line number for coherent display
+	for i := 0; i < len(topCandidates)-1; i++ {
+		for j := i + 1; j < len(topCandidates); j++ {
+			if topCandidates[j].lineNum < topCandidates[i].lineNum {
+				topCandidates[i], topCandidates[j] = topCandidates[j], topCandidates[i]
+			}
+		}
+	}
+
+	// Create snippets
+	for _, c := range topCandidates {
+		snippet := createSnippet(c.lineNum, c.line, c.matches)
+		result.Snippets = append(result.Snippets, snippet)
+	}
+
+	result.MatchCount = totalMatches
 	return result, nil
 }
 
@@ -66,8 +133,18 @@ func findMatchesInLine(line string, queryTokens []string) []core.HighlightRange 
 	var matches []core.HighlightRange
 	lineLower := strings.ToLower(line)
 
-	for _, token := range queryTokens {
-		// Simple case-insensitive substring search
+	// Sort tokens by length (descending) to prioritize longer matches
+	// This helps avoid highlighting "u" inside "unique" if "unique" is also a match
+	sortedTokens := make([]string, len(queryTokens))
+	copy(sortedTokens, queryTokens)
+	sort.Slice(sortedTokens, func(i, j int) bool {
+		return len(sortedTokens[i]) > len(sortedTokens[j])
+	})
+
+	// Track covered ranges to avoid overlapping or sub-matches
+	coveredMask := make([]bool, len(line))
+
+	for _, token := range sortedTokens {
 		searchTermLower := strings.ToLower(token)
 		if len(searchTermLower) == 0 {
 			continue
@@ -83,10 +160,49 @@ func findMatchesInLine(line string, queryTokens []string) []core.HighlightRange 
 			actualStart := startPos + idx
 			actualEnd := actualStart + len(token)
 
-			matches = append(matches, core.HighlightRange{
-				Start: actualStart,
-				End:   actualEnd,
-			})
+			// Bounds check: skip if match extends beyond the line
+			if actualEnd > len(line) {
+				startPos = actualStart + 1
+				if startPos >= len(lineLower) {
+					break
+				}
+				continue
+			}
+
+			// Check if this range is already covered
+			isCovered := false
+			for k := actualStart; k < actualEnd; k++ {
+				if coveredMask[k] {
+					isCovered = true
+					break
+				}
+			}
+
+			if !isCovered {
+				// For short tokens (len < 4), enforce word boundaries
+				// unless it's part of a larger matched token (already handled by sorting/masking)
+				// But here we are looking for *this* token.
+				isShort := len(token) < 4
+				isValid := true
+
+				if isShort {
+					// Check word boundaries
+					if !isWordBoundary(lineLower, actualStart, actualEnd) {
+						isValid = false
+					}
+				}
+
+				if isValid {
+					matches = append(matches, core.HighlightRange{
+						Start: actualStart,
+						End:   actualEnd,
+					})
+					// Mark as covered
+					for k := actualStart; k < actualEnd; k++ {
+						coveredMask[k] = true
+					}
+				}
+			}
 
 			startPos = actualStart + 1
 			if startPos >= len(lineLower) {
@@ -95,7 +211,7 @@ func findMatchesInLine(line string, queryTokens []string) []core.HighlightRange 
 		}
 	}
 
-	// Merge overlapping ranges
+	// Merge overlapping ranges (fallback, though masking handles most)
 	matches = mergeRanges(matches)
 	return matches
 }
