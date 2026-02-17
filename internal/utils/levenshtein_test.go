@@ -195,3 +195,147 @@ func TestMin3(t *testing.T) {
 		}
 	}
 }
+
+func TestDamerauLevenshteinDistance(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        string
+		b        string
+		expected int
+	}{
+		{
+			name:     "identical strings",
+			a:        "hello",
+			b:        "hello",
+			expected: 0,
+		},
+		{
+			name:     "single transposition",
+			a:        "ab",
+			b:        "ba",
+			expected: 1, // Levenshtein would be 2
+		},
+		{
+			name:     "uesr to user — transposition",
+			a:        "uesr",
+			b:        "user",
+			expected: 1,
+		},
+		{
+			name:     "deplyo to deploy — transposition",
+			a:        "deplyo",
+			b:        "deploy",
+			expected: 1,
+		},
+		{
+			name:     "single substitution",
+			a:        "cat",
+			b:        "car",
+			expected: 1,
+		},
+		{
+			name:     "single insertion",
+			a:        "cat",
+			b:        "cats",
+			expected: 1,
+		},
+		{
+			name:     "single deletion",
+			a:        "cats",
+			b:        "cat",
+			expected: 1,
+		},
+		{
+			name:     "empty to non-empty",
+			a:        "",
+			b:        "hello",
+			expected: 5,
+		},
+		{
+			name:     "non-empty to empty",
+			a:        "hello",
+			b:        "",
+			expected: 5,
+		},
+		{
+			name:     "both empty",
+			a:        "",
+			b:        "",
+			expected: 0,
+		},
+		{
+			name:     "completely different",
+			a:        "abc",
+			b:        "xyz",
+			expected: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := DamerauLevenshteinDistance(tt.a, tt.b)
+			if result != tt.expected {
+				t.Errorf("DamerauLevenshteinDistance(%q, %q) = %d, expected %d",
+					tt.a, tt.b, result, tt.expected)
+			}
+		})
+	}
+
+	// Symmetry check
+	t.Run("symmetry", func(t *testing.T) {
+		d1 := DamerauLevenshteinDistance("uesr", "user")
+		d2 := DamerauLevenshteinDistance("user", "uesr")
+		if d1 != d2 {
+			t.Errorf("DamerauLevenshteinDistance is not symmetric: %d != %d", d1, d2)
+		}
+	})
+}
+
+func TestIsWithinDamerauDistance(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        string
+		b        string
+		maxDist  int
+		expected bool
+	}{
+		{
+			name:     "transposition within 1",
+			a:        "uesr",
+			b:        "user",
+			maxDist:  1,
+			expected: true,
+		},
+		{
+			name:     "transposition not within 0",
+			a:        "uesr",
+			b:        "user",
+			maxDist:  0,
+			expected: false,
+		},
+		{
+			name:     "identical within 0",
+			a:        "hello",
+			b:        "hello",
+			maxDist:  0,
+			expected: true,
+		},
+		{
+			name:     "length difference exceeds max",
+			a:        "hi",
+			b:        "hello",
+			maxDist:  1,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsWithinDamerauDistance(tt.a, tt.b, tt.maxDist)
+			if result != tt.expected {
+				t.Errorf("IsWithinDamerauDistance(%q, %q, %d) = %v, expected %v",
+					tt.a, tt.b, tt.maxDist, result, tt.expected)
+			}
+		})
+	}
+}

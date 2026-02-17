@@ -65,18 +65,20 @@ func ExpandTokensWithFuzzy(tokens []string, vocabulary []string) []FuzzyMatch {
 			maxDist = 2
 		}
 
-		// Verify candidates with Levenshtein distance
+		// Verify candidates with Damerau-Levenshtein distance
+		// (counts transpositions like "uesr"→"user" as a single edit)
 		for _, candidate := range candidates {
-			if utils.IsWithinEditDistance(token, candidate, maxDist) {
+			if utils.IsWithinDamerauDistance(token, candidate, maxDist) {
 				sim := utils.TrigramSimilarity(token, candidate)
+				dist := utils.DamerauLevenshteinDistance(token, candidate)
 				matches = append(matches, FuzzyMatch{
 					Original:   token,
 					Matched:    candidate,
-					Distance:   utils.LevenshteinDistance(token, candidate),
+					Distance:   dist,
 					Similarity: sim,
 				})
 				logger.Debugf("Fuzzy match: %q → %q (distance=%d, similarity=%.2f)",
-					token, candidate, utils.LevenshteinDistance(token, candidate), sim)
+					token, candidate, dist, sim)
 			}
 		}
 	}

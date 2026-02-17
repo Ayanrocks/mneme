@@ -90,6 +90,15 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Auto-correct typos in the raw query terms before tokenizing
+	correctedArgs, corrections := query.AutoCorrectQuery(segmentIndex, args)
+	if len(corrections) > 0 {
+		for original, corrected := range corrections {
+			color.Cyan("💡 Typo detected: %q → %q", original, corrected)
+		}
+		queryString = strings.Join(correctedArgs, " ")
+	}
+
 	// Parse the query string into stemmed tokens
 	// Use the corrected query string if available
 	stemmedTokens := query.ParseQuery(queryString)

@@ -201,6 +201,17 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 				continue
 			}
 
+			// Content-based binary check for files with no extension or unknown extensions
+			// This catches extensionless binaries (e.g., compiled executables in dist/)
+			if options.SkipBinaryFiles && len(includeExtMap) == 0 {
+				if ext == "" || !isCommonTextExtension(ext) {
+					if isBinaryFile(entryPath) {
+						logger.Debugf("Skipping binary file (content check): %s", entryPath)
+						continue
+					}
+				}
+			}
+
 			*results = append(*results, entryPath)
 		}
 	}

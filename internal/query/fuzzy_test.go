@@ -117,6 +117,28 @@ func TestExpandTokensWithFuzzy(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("transposition typo on short token", func(t *testing.T) {
+		// "uesr" is a transposition of "user" (4 chars, Damerau distance 1)
+		result := ExpandTokensWithFuzzy([]string{"uesr"}, vocabulary)
+		if len(result) == 0 {
+			t.Error("Expected fuzzy matches for 'uesr', got none")
+			return
+		}
+
+		foundUser := false
+		for _, m := range result {
+			if m.Matched == "user" {
+				foundUser = true
+				if m.Distance != 1 {
+					t.Errorf("Expected Damerau distance 1, got %d", m.Distance)
+				}
+			}
+		}
+		if !foundUser {
+			t.Error("Expected 'user' in fuzzy matches for 'uesr'")
+		}
+	})
 }
 
 func TestMergeTokensWithFuzzy(t *testing.T) {

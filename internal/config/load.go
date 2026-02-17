@@ -26,7 +26,7 @@ var DefaultConfig = core.Config{
 		Paths:             []string{},
 		IncludeExtensions: []string{},
 		ExcludeExtensions: []string{},
-		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache", "target", "build"},
+		Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache", "target", "build", "dist"},
 		Filesystem: core.FilesystemSourceConfig{
 			Enabled: true,
 		},
