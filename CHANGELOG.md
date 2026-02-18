@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-02-19
+
+### Added
+- **Quoted Phrase Search**: Use quotes in `mneme find` to search for exact phrases (e.g., `mneme find "error handling" go`). Multi-word quoted arguments are treated as phrase matches in snippet highlighting, while individual words are matched separately.
+- **Query Parsing Module**: New `internal/query/parse.go` with `ParseQueryInput` for structured tokenization of mixed phrase and keyword queries, with full test coverage.
+- **Benchmark Suite**: New `internal/benchmark` package with a build-tagged (`//go:build benchmark`) test suite that measures crawl, index, search, read, and write throughput across corpus sizes of 100–5,000 files. Results are printed as a formatted table. Run via `make benchmarks`.
+- **`TESTING.md`**: Added documentation for the benchmark targets.
+
+### Changed
+- **Find Command UX**: Improved `Long` description and `Example` fields for the `find` command with clear usage patterns for phrase vs. keyword search.
+- **Search Result Filtering**: Results are now filtered to only include documents with actual text-matching snippets, reducing false positives from BM25 stemming.
+- **Code Cleanup**: Removed unused exported functions, aligned comments, and applied CodeRabbit review suggestions across multiple packages.
+
+### Fixed
+- **Benchmark Isolation**: Fixed benchmark tests leaking into the user's real config and data directories by saving and restoring `constants.ConfigPath` alongside `constants.DirPath`.
+- **Test Stability**: Fixed failing tests caused by stray quote characters in query argument handling.
+
+---
+
+## [0.4.0] - 2026-02-11
+
+### Added
+- **Scanner Buffer Constants**: New `ScannerInitialBufSize` (64 KB) and `ScannerMaxBufSize` (5 MB) constants in `internal/constants/fs.go` for configurable scanner limits.
+- **Storage Tests**: Added tests in `internal/storage/fs_test.go` for new storage initialization paths.
+
+### Changed
+- **`MaxTokensPerDocument` Default**: Changed from a fixed value to `0`, meaning all tokens in a file are indexed by default. When set to a positive value, files exceeding the limit are skipped instead of truncated.
+
+### Fixed
+- **`bufio.Scanner: token too long`**: Resolved a crash when indexing files with very long lines (e.g., minified JSON) by increasing the scanner buffer from the default 64 KB up to 5 MB.
+- **Log Level Not Evaluated at Runtime**: Fixed an issue where the configured log level was read at init time and never re-evaluated, causing log-level changes in `mneme.toml` to have no effect until restart.
+
+---
+
 ## [0.3.0] - 2026-02-10
 
 ### Added
