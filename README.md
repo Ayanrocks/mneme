@@ -31,13 +31,40 @@ Whether you have thousands of markdown notes, a vast library of PDF documents, o
 
 ## 📦 Installation
 
+### Using Go
+
 Ensure you have **Go 1.21+** installed.
 
 ```bash
 go install github.com/ayanrocks/mneme@latest
 ```
 
-Verify the installation:
+### Using Pre-built Binaries
+
+If you don't have Go installed, download a pre-built binary from the [GitHub Releases](https://github.com/ayanrocks/mneme/releases) page.
+
+1. Download the binary for your platform:
+    | Platform          | Binary                      |
+    | ----------------- | --------------------------- |
+    | Linux (x86_64)    | `mneme-linux-amd64`         |
+    | macOS (Intel)     | `mneme-darwin-amd64`        |
+    | macOS (Apple Silicon) | `mneme-darwin-arm64`    |
+    | Windows (x86_64)  | `mneme-windows-amd64.exe`   |
+
+2. Make it executable and move it to your PATH (macOS/Linux):
+    ```bash
+    chmod +x mneme-<os>-<arch>
+    sudo mv mneme-<os>-<arch> /usr/local/bin/mneme
+    ```
+
+    On Windows, move the `.exe` to a directory in your `PATH`.
+
+    Alternatively, run the binary directly from where you downloaded it without adding it to your PATH by opening a new terminal in the same folder and then:
+    ```bash
+    ./mneme-<os>-<arch> version
+    ```
+
+### Verify
 
 ```bash
 mneme version
