@@ -216,6 +216,7 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 					// Check exact match for part
 					if _, exists := segment.InvertedIndex[partLower]; exists {
 						correctedParts = append(correctedParts, partLower)
+						allCorrected = false // exact match is not a fuzzy correction
 						continue
 					}
 
@@ -278,9 +279,11 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 					if partBest != "" {
 						correctedParts = append(correctedParts, partBest)
 						wasCorrected = true
+						// allCorrected remains true — this part was fuzzy-corrected
 					} else {
-						// Fallback to original lowercased
+						// Fallback to original lowercased — this part was NOT corrected
 						correctedParts = append(correctedParts, partLower)
+						allCorrected = false
 					}
 				}
 
