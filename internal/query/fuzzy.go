@@ -155,7 +155,7 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 		// This handles cases like "fnid" vs "find" where trigram similarity is too low.
 		if len(candidates) == 0 && len(termLower) <= 4 {
 			for _, vocabTerm := range vocabulary {
-				if utils.IsWithinEditDistance(termLower, vocabTerm, constants.FuzzyMaxEditDistance) {
+				if utils.IsWithinDamerauDistance(termLower, vocabTerm, constants.FuzzyMaxEditDistance) {
 					candidates = append(candidates, vocabTerm)
 				}
 			}
@@ -166,7 +166,7 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 		maxSim := -1.0
 
 		for _, candidate := range candidates {
-			dist := utils.LevenshteinDistance(termLower, candidate)
+			dist := utils.DamerauLevenshteinDistance(termLower, candidate)
 
 			// We only care if dist is within allowed range
 			if dist > constants.FuzzyMaxEditDistance {
@@ -231,7 +231,7 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 					// This handles cases like "fnid" vs "find" where trigram similarity is 0
 					if len(partCandidates) == 0 && len(partLower) <= 4 {
 						for _, term := range vocabulary {
-							if utils.IsWithinEditDistance(partLower, term, constants.FuzzyMaxEditDistance) {
+							if utils.IsWithinDamerauDistance(partLower, term, constants.FuzzyMaxEditDistance) {
 								partCandidates = append(partCandidates, term)
 							}
 						}
@@ -242,7 +242,7 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 					partMaxScore := -100.0 // Combined score: Sim - (LenDiff * 0.1)
 
 					for _, cand := range partCandidates {
-						d := utils.LevenshteinDistance(partLower, cand)
+						d := utils.DamerauLevenshteinDistance(partLower, cand)
 						// Be stricter with short parts
 						threshold := constants.FuzzyMaxEditDistance
 						if len(partLower) < 4 {
@@ -305,7 +305,7 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 					// Quick check against vocabulary
 					// This is O(N) but only happens for corrected compound terms which are rare.
 					for _, vocabTerm := range vocabulary {
-						dist := utils.LevenshteinDistance(recombined, vocabTerm)
+						dist := utils.DamerauLevenshteinDistance(recombined, vocabTerm)
 						if dist <= constants.FuzzyMaxEditDistance && dist < minDist {
 							minDist = dist
 							fuzzyMatch = vocabTerm
