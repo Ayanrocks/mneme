@@ -48,20 +48,21 @@ func ExpandTokensWithFuzzy(tokens []string, vocabulary []string) []FuzzyMatch {
 
 	for _, token := range tokens {
 		// Skip short tokens — too many false positives
-		if len([]rune(token)) < constants.FuzzyMinTermLength {
+		runeLen := len([]rune(token))
+		if runeLen < constants.FuzzyMinTermLength {
 			continue
 		}
 
 		// Find candidates via trigram similarity
 		candidates := utils.FindCandidates(token, trigramIndex, constants.TrigramSimilarityThreshold)
 
-		// Determine max edit distance based on token length
+		// Determine max edit distance based on token length (rune count)
 		// Dynamic thresholding:
 		// - Length < 4: No fuzzy (handled by MinTermLength check above)
 		// - Length 4-5: Max distance 1 (prevent "uesr" -> "ue" false positives)
 		// - Length >= 6: Max distance 2 (standard fuzzy behavior)
 		maxDist := 1
-		if len(token) >= 6 {
+		if runeLen >= 6 {
 			maxDist = 2
 		}
 
@@ -146,6 +147,16 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 
 		// Not found. Search for correction using lowercase term.
 		candidates := utils.FindCandidates(termLower, trigramIndex, constants.TrigramSimilarityThreshold)
+
+		// Fallback: If no trigram candidates for short terms, scan entire vocabulary.
+		// This handles cases like "fnid" vs "find" where trigram similarity is too low.
+		if len(candidates) == 0 && len(termLower) <= 4 {
+			for _, vocabTerm := range vocabulary {
+				if utils.IsWithinEditDistance(termLower, vocabTerm, constants.FuzzyMaxEditDistance) {
+					candidates = append(candidates, vocabTerm)
+				}
+			}
+		}
 
 		bestMatch := ""
 		minDist := 100
