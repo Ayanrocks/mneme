@@ -89,15 +89,9 @@ func FormatSearchResult(docPath string, queryTokens []string, score float64) (*c
 	}
 
 	// Sort candidates by score descending
-	// Use a stable sort to preserve line order for ties? No, we want score.
-	// We can implement a simple sort.
-	for i := 0; i < len(candidates)-1; i++ {
-		for j := i + 1; j < len(candidates); j++ {
-			if candidates[j].score > candidates[i].score {
-				candidates[i], candidates[j] = candidates[j], candidates[i]
-			}
-		}
-	}
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].score > candidates[j].score
+	})
 
 	// Select top snippets, but try to respect original line order if scores are somewhat close?
 	// For now, simpler is better: Top scores win.
@@ -110,13 +104,9 @@ func FormatSearchResult(docPath string, queryTokens []string, score float64) (*c
 	}
 
 	// Re-sort selected snippets by line number for coherent display
-	for i := 0; i < len(topCandidates)-1; i++ {
-		for j := i + 1; j < len(topCandidates); j++ {
-			if topCandidates[j].lineNum < topCandidates[i].lineNum {
-				topCandidates[i], topCandidates[j] = topCandidates[j], topCandidates[i]
-			}
-		}
-	}
+	sort.Slice(topCandidates, func(i, j int) bool {
+		return topCandidates[i].lineNum < topCandidates[j].lineNum
+	})
 
 	// Create snippets
 	for _, c := range topCandidates {

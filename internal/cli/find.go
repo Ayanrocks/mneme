@@ -129,11 +129,13 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 
 	// Use original searchTerms (which preserve quoted phrases) for snippet matching?
 	// Actually, we should use correctedArgs for snippet matching too, so we highlight "find" instead of "fnid".
+	// Use user's corrected query terms for snippet generation first.
+	// This ensures better highlighting accuracy as it uses the user's intended terms
+	// (e.g., "find") rather than just the stemmed/fuzzy matches (e.g., "fnid").
 	var results []*core.SearchResult
 	for _, doc := range rankedDocs {
-		// Use the terms that actually matched this document (including fuzzy expansions)
-		// for precise highlighting.
-		result, err := display.FormatSearchResult(doc.Path, doc.MatchedTerms, doc.Score)
+		// Attempt to format with corrected user input first
+		result, err := display.FormatSearchResult(doc.Path, correctedArgs, doc.Score)
 		if err != nil {
 			logger.Debugf("Failed to format result for %s: %v", doc.Path, err)
 			continue
@@ -144,7 +146,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		if len(result.Snippets) > 0 {
 			results = append(results, result)
 		} else {
-			// Fallback: if corrected terms didn't match (maybe stems vs raw mismatch),
+			// Fallback: if corrected terms didn't yield snippets (maybe due to stem mismatch),
 			// use the actual terms that matched during ranking (including fuzzy expansions).
 			result, err = display.FormatSearchResult(doc.Path, doc.MatchedTerms, doc.Score)
 			if err == nil && len(result.Snippets) > 0 {

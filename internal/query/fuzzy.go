@@ -142,6 +142,9 @@ func AutoCorrectQuery(segment *core.Segment, terms []string) ([]string, map[stri
 		termLower := strings.ToLower(term)
 		if _, exists := segment.InvertedIndex[termLower]; exists {
 			correctedTerms = append(correctedTerms, term) // Keep original casing
+			if term != termLower {
+				corrections[term] = termLower
+			}
 			continue
 		}
 

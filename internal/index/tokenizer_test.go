@@ -215,6 +215,44 @@ func TestTokenizeQuery(t *testing.T) {
 	}
 }
 
+func TestTokenizeQuery_CamelCaseDifference(t *testing.T) {
+	input := "getUserProfile"
+
+	queryTokens := TokenizeQuery(input)
+	contentTokens := TokenizeContent(input)
+
+	// TokenizeQuery should NOT split camelCase, while TokenizeContent SHOULD.
+	// Therefore, content tokens should be significantly larger (parts + full)
+	// while query tokens should likely just be the lowercase/stemmed full identifier.
+	if len(queryTokens) >= len(contentTokens) {
+		t.Errorf("Expected TokenizeQuery to yield fewer tokens than TokenizeContent for camelCase %q. Query tokens: %v (len=%d), Content tokens: %v (len=%d)",
+			input, queryTokens, len(queryTokens), contentTokens, len(contentTokens))
+	}
+
+	// Verify TokenizeQuery preserves the stemmed full identifier
+	// We expect the result of TokenizeQuery to be present in TokenizeContent results (usually the first one)
+	if len(queryTokens) > 0 {
+		// Just check that the single query token exists in the content tokens
+		// We can't assume it's index 0 in content tokens without knowing implementation detail of processIdentifier,
+		// but typically it is.
+		stemmedID := queryTokens[0]
+		found := false
+		for _, token := range contentTokens {
+			if token == stemmedID {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("TokenizeQuery(%q) result %q not found in TokenizeContent result %v",
+				input, stemmedID, contentTokens)
+		}
+	} else {
+		t.Errorf("TokenizeQuery(%q) returned empty result", input)
+	}
+}
+
 func TestStopwordFiltering(t *testing.T) {
 	// Programming keywords should be filtered
 	// Using words that are stopwords AND don't change much when stemmed
