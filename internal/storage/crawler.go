@@ -201,6 +201,17 @@ func crawlDirectory(dirPath string, results *[]string, includeExtMap map[string]
 				continue
 			}
 
+			// Content-based binary check for files with no extension or unknown extensions
+			// This catches extensionless binaries (e.g., compiled executables in dist/)
+			if options.SkipBinaryFiles && len(includeExtMap) == 0 {
+				if ext == "" || !isCommonTextExtension(ext) {
+					if isBinaryFile(entryPath) {
+						logger.Debugf("Skipping binary file (content check): %s", entryPath)
+						continue
+					}
+				}
+			}
+
 			*results = append(*results, entryPath)
 		}
 	}
@@ -248,7 +259,58 @@ func shouldSkipFile(filePath string, options core.CrawlerOptions) bool {
 		if !found {
 			return true
 		}
+	} else if options.SkipBinaryFiles {
+		// If NO specific extensions are included, we must be careful not to index binary files
+		// that don't have a known extension (like the 'mneme' binary).
+		// We perform a content-based check for files with no extension or unknown extension.
+
+		// If extension is known text (go, md, txt, etc.), we skip the expensive content check
+		// But if extension is empty or not in a common allowlist, we check content.
+		if ext == "" || !isCommonTextExtension(ext) {
+			if isBinaryFile(filePath) {
+				return true
+			}
+		}
 	}
+
+	return false
+}
+
+// isCommonTextExtension returns true if the extension is strictly text-based code/doc
+func isCommonTextExtension(ext string) bool {
+	switch ext {
+	case "go", "md", "txt", "json", "yaml", "yml", "toml", "xml", "html", "css", "js", "ts", "tsx", "jsx", "sh", "bash", "zsh", "c", "cpp", "h", "hpp", "java", "py", "rb", "php":
+		return true
+	}
+	return false
+}
+
+// isBinaryFile checks if a file is binary by reading the first 512 bytes
+// and checking for null bytes or using http.DetectContentType
+func isBinaryFile(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false // Assume text if we can't read (or let indexer fail later)
+	}
+	defer f.Close()
+
+	// Read up to 512 bytes
+	buf := make([]byte, 512)
+	n, err := f.Read(buf)
+	if err != nil && n == 0 {
+		return false // Empty file is safe
+	}
+
+	// 1. Check for null bytes (common in binary files)
+	for i := 0; i < n; i++ {
+		if buf[i] == 0 {
+			return true
+		}
+	}
+
+	// 2. Use DetectContentType?
+	// http.DetectContentType(buf[:n]) often returns "application/octet-stream" for binaries,
+	// but can be flaky for some source types. Null byte check is robust for executables.
 
 	return false
 }

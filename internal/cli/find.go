@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strings"
+
 	"mneme/internal/config"
 	"mneme/internal/core"
 	"mneme/internal/display"
@@ -8,7 +10,6 @@ import (
 	"mneme/internal/platform"
 	"mneme/internal/query"
 	"mneme/internal/storage"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ var findCmd = &cobra.Command{
 	Short: "Find documents",
 	Long: `Find documents matching the given query, showing relevant snippets.
 Results are ranked by relevance using BM25 and Vector Space Model algorithms.
+Fuzzy matching is automatically applied to catch typos and near-matches.
 
 Use quotes to search for exact phrases:
   mneme find "aws region"       → matches the exact phrase "aws region"
@@ -55,31 +57,50 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Build the raw query string from args
-	queryString := strings.Join(args, " ")
-	queryString = strings.TrimSpace(queryString)
-
-	if queryString == "" {
-		logger.PrintError("Search query cannot be empty. Example: mneme find \"your query\"")
-		return
-	}
-
-	config, err := config.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		logger.Errorf("Failed to load config: %+v", err)
 		return
 	}
 
-	// Use args directly as search terms.
-	// The shell already handles quote parsing:
-	//   mneme find "aws region"     → args = ["aws region"]  (one phrase)
-	//   mneme find deploy prod      → args = ["deploy", "prod"] (two words)
-	//   mneme find "error handling" go → args = ["error handling", "go"]
-	// Multi-word args (containing spaces) were quoted by the user = phrase search.
-	// Single-word args are individual token matches.
-	searchTerms := args
+	// Load the index first to enable auto-correction
+	var segmentIndex *core.Segment
 
-	// Build stemmed tokens for BM25/VSM by splitting all terms into individual words
+	if display.ShouldShowProgress() {
+		pb := display.NewProgressBar("Initializing", 0)
+		pb.Start()
+		pb.SetMessage("Loading index...")
+		segmentIndex, err = storage.LoadSegmentIndex()
+		pb.Complete()
+	} else {
+		segmentIndex, err = storage.LoadSegmentIndex()
+	}
+
+	if err != nil {
+		logger.PrintError("No index found. Please run 'mneme index' to build the search index first.")
+		return
+	}
+
+	// Build the query string from args directly
+	queryString := strings.Join(args, " ")
+	queryString = strings.TrimSpace(queryString)
+
+	if queryString == "" {
+		logger.PrintError("Search query cannot be empty.")
+		return
+	}
+
+	// Auto-correct typos in the raw query terms before tokenizing
+	correctedArgs, corrections := query.AutoCorrectQuery(segmentIndex, args)
+	if len(corrections) > 0 {
+		for original, corrected := range corrections {
+			color.Cyan("💡 Typo detected: %q → %q", original, corrected)
+		}
+		queryString = strings.Join(correctedArgs, " ")
+	}
+
+	// Parse the query string into stemmed tokens
+	// Use the corrected query string if available
 	stemmedTokens := query.ParseQuery(queryString)
 
 	if len(stemmedTokens) == 0 {
@@ -87,38 +108,18 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Check if we should show progress bar
-	var segmentIndex *core.Segment
+	// Check if we should show progress bar for ranking
 	var rankedDocs []core.RankedDocument
 
 	if display.ShouldShowProgress() {
 		pb := display.NewProgressBar("Searching", 0)
 		pb.Start()
-		pb.SetMessage("Loading index...")
-
-		// Read segments index from the file system
-		segmentIndex, err = storage.LoadSegmentIndex()
-		if err != nil {
-			pb.Complete()
-			logger.PrintError("No index found. Please run 'mneme index' to build the search index first.")
-			return
-		}
-
 		pb.SetMessage("Ranking documents...")
-		// Get ranked documents with scores
-		rankedDocs = query.RankDocuments(segmentIndex, stemmedTokens, config.Search.DefaultLimit, &config.Ranking)
+
+		rankedDocs = query.RankDocuments(segmentIndex, stemmedTokens, cfg.Search.DefaultLimit, &cfg.Ranking)
 		pb.Complete()
 	} else {
-		// No progress bar - regular logging
-		// Read segments index from the file system
-		segmentIndex, err = storage.LoadSegmentIndex()
-		if err != nil {
-			logger.PrintError("No index found. Please run 'mneme index' to build the search index first.")
-			return
-		}
-
-		// Get ranked documents with scores
-		rankedDocs = query.RankDocuments(segmentIndex, stemmedTokens, config.Search.DefaultLimit, &config.Ranking)
+		rankedDocs = query.RankDocuments(segmentIndex, stemmedTokens, cfg.Search.DefaultLimit, &cfg.Ranking)
 	}
 
 	if len(rankedDocs) == 0 {
@@ -126,11 +127,15 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Use searchTerms (which preserve quoted phrases) for snippet matching
-	// This ensures "aws region" is matched as an exact phrase in document lines
+	// Use original searchTerms (which preserve quoted phrases) for snippet matching?
+	// Actually, we should use correctedArgs for snippet matching too, so we highlight "find" instead of "fnid".
+	// Use user's corrected query terms for snippet generation first.
+	// This ensures better highlighting accuracy as it uses the user's intended terms
+	// (e.g., "find") rather than just the stemmed/fuzzy matches (e.g., "fnid").
 	var results []*core.SearchResult
 	for _, doc := range rankedDocs {
-		result, err := display.FormatSearchResult(doc.Path, searchTerms, doc.Score)
+		// Attempt to format with corrected user input first
+		result, err := display.FormatSearchResult(doc.Path, correctedArgs, doc.Score)
 		if err != nil {
 			logger.Debugf("Failed to format result for %s: %v", doc.Path, err)
 			continue
@@ -140,6 +145,13 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		// This filters out false positives from BM25 stemming
 		if len(result.Snippets) > 0 {
 			results = append(results, result)
+		} else {
+			// Fallback: if corrected terms didn't yield snippets (maybe due to stem mismatch),
+			// use the actual terms that matched during ranking (including fuzzy expansions).
+			result, err = display.FormatSearchResult(doc.Path, doc.MatchedTerms, doc.Score)
+			if err == nil && len(result.Snippets) > 0 {
+				results = append(results, result)
+			}
 		}
 	}
 

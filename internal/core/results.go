@@ -1,10 +1,11 @@
 package core
 
-// RankedDocument represents a search result with its score
 type RankedDocument struct {
-	DocID uint
-	Path  string
-	Score float64
+	DocID        uint
+	Path         string
+	Score        float64
+	MatchCount   int      // Total frequency of matched terms (for tie-breaking)
+	MatchedTerms []string // Terms used for matching (including fuzzy expansions)
 }
 
 // GetScore implements utils.Scored interface

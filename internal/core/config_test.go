@@ -19,7 +19,7 @@ func TestDefaultConfigStructure(t *testing.T) {
 			Sources: SourcesConfig{
 				Paths:             []string{},
 				IncludeExtensions: []string{},
-				Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache"},
+				Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache", "target", "build", "dist"},
 			},
 			Watcher: WatcherConfig{
 				Enabled:    true,
@@ -91,12 +91,12 @@ func TestSourcesConfig(t *testing.T) {
 		config := SourcesConfig{
 			Paths:             []string{},
 			IncludeExtensions: []string{},
-			Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache"},
+			Ignore:            []string{".git", "node_modules", ".vscode", ".idea", "vendor", ".cache", "target", "build", "dist"},
 		}
 
 		assert.Empty(t, config.Paths)
 		assert.Empty(t, config.IncludeExtensions)
-		assert.Len(t, config.Ignore, 6)
+		assert.Len(t, config.Ignore, 9)
 		assert.Contains(t, config.Ignore, ".git")
 		assert.Contains(t, config.Ignore, "node_modules")
 	})
