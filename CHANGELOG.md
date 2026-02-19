@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-02-19
+
+### Added
+- **Fuzzy Search Engine**: `mneme find` now auto-corrects typos in search queries before executing. If a query term isn't found in the index, the engine substitutes the closest matching term and re-runs the search, printing a *"Typo detected — did you mean…"* hint to the user.
+- **`internal/query/fuzzy.go`**: New package providing the core auto-correction pipeline — `GetVocabulary`, `ExpandTokensWithFuzzy`, and `AutoCorrectQuery` — which orchestrate candidate lookup, distance scoring, and query rewriting.
+- **Trigram Index (`internal/utils/trigram.go`)**: Character-trigram index over the full indexed vocabulary for fast O(1) candidate pre-filtering. Uses the Dice coefficient (`TrigramSimilarityThreshold = 0.3`) to short-circuit Levenshtein evaluation on dissimilar terms.
+- **Damerau-Levenshtein Distance (`internal/utils/levenshtein.go`)**: Replaced the standard Levenshtein implementation with the Optimal String Alignment variant of Damerau-Levenshtein, which counts adjacent transpositions (e.g., `"uesr"` → `"user"`) as a single edit, improving correction accuracy for common finger-slip typos.
+- **Dynamic Edit-Distance Thresholding**: Fuzzy matching applies a length-aware maximum edit distance — distance 1 for terms of 4–5 characters, distance 2 for terms of 6+ characters — to control false-positive corrections on short words.
+- **Compound Identifier Correction**: Query terms that look like camelCase or snake_case identifiers are split into constituent parts, each part is independently corrected, and then recombined. This prevents over-eager fuzzy correction of technical identifiers.
+- **Fuzzy Constants (`internal/constants/fuzzy.go`)**: Centralised tuning knobs — `FuzzyMaxEditDistance`, `FuzzyMinTermLength`, `TrigramSimilarityThreshold`, and `FuzzyScorePenalty` — making it easy to adjust matching behaviour without touching algorithm code.
+- **Expanded Default Ignore List**: Added `target`, `build`, and `dist` to the default crawler ignore list in `internal/config/load.go` to avoid indexing common build-output directories.
+- **Binary Download Instructions in `README.md`**: Added a "Using a pre-built binary" section for users who do not have Go installed, covering Linux, macOS (Intel & Apple Silicon), and Windows.
+- **Updated Logo**: Replaced the placeholder logo with a high-resolution asset (`assets/logo.png`).
+
+### Changed
+- **Find Command Fallback**: Fixed the fallback path in `internal/cli/find.go` so that corrected search terms (not the original raw `doc.MatchedTerms`) are passed to `display.FormatSearchResult` on the first attempt. The original matched terms are only used as a fallback if the corrected highlight fails.
+- **Fuzzy Score Penalty**: Fuzzy-matched tokens are penalised by a configurable factor (`FuzzyScorePenalty = 0.8`) so that exact matches always rank above auto-corrected results.
+- **Tokenizer Hardening**: Updated `internal/index/tokenizer.go` to avoid splitting compound identifiers that are present as a single entry in the index, preventing ghost tokens that pollute fuzzy candidate lists.
+
+### Fixed
+- **`allCorrected` Never Reset**: Fixed a logic bug in `AutoCorrectQuery` where `allCorrected` was initialised to `true` but never set to `false` when a query part matched exactly or had no suitable correction, making the `recombine` guard condition always hold. Now `allCorrected` is correctly set to `false` in both the exact-match and no-candidate branches.
+- **Damerau vs. Standard Levenshtein**: Replaced calls to the old `LevenshteinDistance` helper with `DamerauLevenshteinDistance` and `IsWithinDamerauDistance` throughout `internal/query/fuzzy.go`, fixing cases where single-transposition typos were incorrectly counted as two edits and thus rejected.
+- **Config Ignore List Test**: Updated `internal/core/config_test.go` to expect the expanded nine-entry default ignore list, aligning the test with the updated `load.go` defaults.
+
+---
+
 ## [0.5.0] - 2026-02-19
 
 ### Added
