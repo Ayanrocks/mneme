@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"regexp"
 	"strings"
 
 	"mneme/internal/config"
@@ -13,6 +14,10 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+)
+
+var (
+	regexPattern string
 )
 
 var findCmd = &cobra.Command{
@@ -28,8 +33,13 @@ Use quotes to search for exact phrases:
   mneme find "error handling" go → matches the phrase "error handling" and the word "go"`,
 	Example: `  mneme find "machine learning"
   mneme find python tutorial
-  mneme find "error handling" in go`,
+  mneme find "error handling" in go
+  mneme find --regex "error.*handling"`,
 	Run: findCmdExecute,
+}
+
+func init() {
+	findCmd.Flags().StringVarP(&regexPattern, "regex", "r", "", "Search using a regular expression")
 }
 
 func findCmdExecute(cmd *cobra.Command, args []string) {
@@ -122,6 +132,31 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		rankedDocs = query.RankDocuments(segmentIndex, stemmedTokens, cfg.Search.DefaultLimit, &cfg.Ranking)
 	}
 
+	// Filter by regex if provided, or proceed with all ranked docs
+	var filteredDocs []core.RankedDocument
+	if regexPattern != "" {
+		for _, doc := range rankedDocs {
+			// Check if file contains regex
+			// We can do this by trying to read it
+			lines, err := storage.ReadFileContents(doc.Path)
+			if err != nil {
+				continue
+			}
+			re, err := regexp.Compile(regexPattern)
+			if err != nil {
+				logger.Errorf("Invalid regex: %v", err)
+				return
+			}
+			for _, line := range lines {
+				if re.MatchString(line) {
+					filteredDocs = append(filteredDocs, doc)
+					break
+				}
+			}
+		}
+		rankedDocs = filteredDocs
+	}
+
 	if len(rankedDocs) == 0 {
 		logger.PrintError("No documents found for query: %s", queryString)
 		return
@@ -135,7 +170,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 	var results []*core.SearchResult
 	for _, doc := range rankedDocs {
 		// Attempt to format with corrected user input first
-		result, err := display.FormatSearchResult(doc.Path, correctedArgs, doc.Score)
+		result, err := display.FormatSearchResult(doc.Path, correctedArgs, regexPattern, doc.Score)
 		if err != nil {
 			logger.Debugf("Failed to format result for %s: %v", doc.Path, err)
 			continue
@@ -148,7 +183,7 @@ func findCmdExecute(cmd *cobra.Command, args []string) {
 		} else {
 			// Fallback: if corrected terms didn't yield snippets (maybe due to stem mismatch),
 			// use the actual terms that matched during ranking (including fuzzy expansions).
-			result, err = display.FormatSearchResult(doc.Path, doc.MatchedTerms, doc.Score)
+			result, err = display.FormatSearchResult(doc.Path, doc.MatchedTerms, regexPattern, doc.Score)
 			if err == nil && len(result.Snippets) > 0 {
 				results = append(results, result)
 			}

@@ -31,9 +31,9 @@ var (
 	separatorColor = color.New(color.FgWhite).SprintFunc()
 )
 
-// FormatSearchResult takes a document path and query tokens, reads the file,
-// and returns a formatted SearchResult with snippets
-func FormatSearchResult(docPath string, queryTokens []string, score float64) (*core.SearchResult, error) {
+// FormatSearchResult takes a document path, query tokens, and an optional regex pattern.
+// Reads the file, and returns a formatted SearchResult with snippets.
+func FormatSearchResult(docPath string, queryTokens []string, regexPattern string, score float64) (*core.SearchResult, error) {
 	lines, err := storage.ReadFileContents(docPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", docPath, err)
@@ -43,6 +43,14 @@ func FormatSearchResult(docPath string, queryTokens []string, score float64) (*c
 		DocPath:  docPath,
 		Score:    score,
 		Snippets: []core.Snippet{},
+	}
+
+	var re *regexp.Regexp
+	if regexPattern != "" {
+		re, err = regexp.Compile(regexPattern)
+		if err != nil {
+			return nil, fmt.Errorf("invalid regex pattern: %w", err)
+		}
 	}
 
 	type matchLine struct {
@@ -58,32 +66,47 @@ func FormatSearchResult(docPath string, queryTokens []string, score float64) (*c
 
 	// Find all matching lines
 	for lineNum, line := range lines {
-		matches := findMatchesInLine(line, queryTokens)
+		var matches []core.HighlightRange
+		if re != nil {
+			// Find matches using regex
+			allMatches := re.FindAllStringIndex(line, -1)
+			for _, m := range allMatches {
+				matches = append(matches, core.HighlightRange{
+					Start: m[0],
+					End:   m[1],
+				})
+			}
+		} else {
+			// Find all matching lines using tokens
+			matches = findMatchesInLine(line, queryTokens)
+		}
+
 		if len(matches) > 0 {
 			totalMatches += len(matches)
 
 			// Calculate score:
-			// 1. Calculate unique terms matched in this line
-			// 2. Score = (UniqueTerms * 100) + (TotalMatches)
-			// This heavily prioritizes lines matching multiple different terms (e.g. "find" AND "token")
-			// over lines matching the same term multiple times.
-
-			matchedTerms := make(map[string]bool)
-			lineLower := strings.ToLower(line)
-			for _, token := range queryTokens {
-				if len(token) > 0 && strings.Contains(lineLower, strings.ToLower(token)) {
-					matchedTerms[token] = true
+			// For regex, score by number of matches? Or prioritize differently?
+			// For now, simple score based on match count if no regex
+			lineScore := 0
+			if re == nil {
+				matchedTerms := make(map[string]bool)
+				lineLower := strings.ToLower(line)
+				for _, token := range queryTokens {
+					if len(token) > 0 && strings.Contains(lineLower, strings.ToLower(token)) {
+						matchedTerms[token] = true
+					}
 				}
+				uniqueCount := len(matchedTerms)
+				lineScore = (uniqueCount * 100) + len(matches)
+			} else {
+				lineScore = len(matches)
 			}
-			uniqueCount := len(matchedTerms)
-			lineScore := (uniqueCount * 100) + len(matches)
 
 			candidates = append(candidates, matchLine{
-				lineNum:     lineNum + 1,
-				line:        line,
-				matches:     matches,
-				score:       lineScore,
-				uniqueTerms: uniqueCount,
+				lineNum: lineNum + 1,
+				line:    line,
+				matches: matches,
+				score:   lineScore,
 			})
 		}
 	}
@@ -414,7 +437,7 @@ func PrintResults(results []*core.SearchResult, showScore bool, query string) {
 
 // PrintSimpleResult prints a condensed result format (path + first snippet)
 func PrintSimpleResult(docPath string, queryTokens []string) {
-	result, err := FormatSearchResult(docPath, queryTokens, 0)
+	result, err := FormatSearchResult(docPath, queryTokens, "", 0)
 	if err != nil {
 		// Fallback to just printing the path
 		fmt.Printf("%s\n", pathColor(docPath))
@@ -445,5 +468,5 @@ func truncateSnippet(content string, maxLen int) string {
 func CreateSearchResultFromTokens(docPath string, originalQuery string, score float64) (*core.SearchResult, error) {
 	// Tokenize the original query to get search terms
 	queryTokens := index.TokenizeQuery(originalQuery)
-	return FormatSearchResult(docPath, queryTokens, score)
+	return FormatSearchResult(docPath, queryTokens, "", score)
 }
